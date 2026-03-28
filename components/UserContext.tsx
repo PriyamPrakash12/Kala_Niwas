@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export type UserProfile = {
   firstName: string;
@@ -14,17 +15,18 @@ export type UserProfile = {
 type UserContextType = {
   user: UserProfile | null;
   updateUser: (data: Partial<UserProfile>) => void;
+  logout: () => void;
 };
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
-    const stored = localStorage.getItem('kala_kit_user');
+    const stored = localStorage.getItem('कला_Niwas_user');
     if (stored) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setUser(JSON.parse(stored));
     } else {
       setUser({
@@ -41,15 +43,21 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const updateUser = (data: Partial<UserProfile>) => {
     setUser((prev) => {
       const newData = { ...prev, ...data } as UserProfile;
-      localStorage.setItem('kala_kit_user', JSON.stringify(newData));
+      localStorage.setItem('कला_Niwas_user', JSON.stringify(newData));
       return newData;
     });
   };
 
+  const logout = () => {
+    localStorage.removeItem('कला_Niwas_user');
+    setUser(null);
+    router.push('/');
+  };
+
   return (
-    <UserContext.Provider value={{ user, updateUser }}>
-      {children}
-    </UserContext.Provider>
+      <UserContext.Provider value={{ user, updateUser, logout }}>
+        {children}
+      </UserContext.Provider>
   );
 }
 
