@@ -44,7 +44,7 @@ export default function ImageEnhancer() {
       const base64Data = originalImage.split(',')[1];
       const [enhanceResponse, analysisResponse] = await Promise.all([
         ai.models.generateContent({
-          model: 'gemini-2.5-flash-image',
+          model: 'gemini-1.5-flash-image',
           contents: { parts: [{ inlineData: { data: base64Data, mimeType } }, { text: 'Enhance this product image. Make it look professional, well-lit, high quality, suitable for an e-commerce store. Keep the main product intact but improve the lighting, background, and overall appeal.' }] },
         }),
         ai.models.generateContent({

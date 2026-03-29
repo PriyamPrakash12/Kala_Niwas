@@ -177,7 +177,7 @@ ${history}
 
 Now reply to the latest user message.`;
 
-            const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
+            const response = await ai.models.generateContent({ model: 'gemini-1.5-flash', contents: prompt });
             const reply = response.candidates?.[0]?.content?.parts?.find(p => p.text)?.text ?? 'Sorry, something went wrong.';
             setMessages(prev => [...prev, { role: 'assistant', text: reply }]);
         } catch {

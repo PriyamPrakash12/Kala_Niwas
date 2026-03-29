@@ -37,7 +37,7 @@ export default function PricingSuggestion() {
       const prompt = `You are an expert pricing strategist for Indian small businesses.
 Analyze: Product: ${formData.productName}, Material Cost: ₹${formData.materialCost}, Labor Cost: ₹${formData.laborCost}, Competitor Price: ₹${formData.competitorPrice || 'Unknown'}, Target Market: ${formData.targetMarket}.
 Provide: 1. Recommended Price Range (₹). 2. Pricing Strategy rationale. 3. Profit Margin Analysis. 4. Marketing tips to justify the price. Format with Markdown.`;
-      const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
+      const response = await ai.models.generateContent({ model: 'gemini-1.5-flash', contents: prompt });
       const parts = response.candidates?.[0]?.content?.parts;
       setResult(parts ? parts.filter((p) => p.text).map((p) => p.text).join('\n') : 'No analysis generated.');
     } catch { setResult('An error occurred. Please try again.'); }

@@ -141,7 +141,7 @@ export function TopNav() {
                             </svg>
                         </div>
                         <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 17, letterSpacing: '0.06em', color: '#fff' }}>
-              KALA<span style={{ color: '#00e5ff' }}>KIT</span>
+              कला<span style={{ color: '#00e5ff' }}>Niwas</span>
             </span>
                     </Link>
 

@@ -215,7 +215,7 @@ export default function WelcomePage() {
                 </svg>
               </div>
               <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 18, color: '#fff', letterSpacing: '0.05em' }}>
-              कला<span style={{ color: '#0078f2' }}>KIT</span>
+              कला<span style={{ color: '#0078f2' }}>Niwas</span>
             </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>

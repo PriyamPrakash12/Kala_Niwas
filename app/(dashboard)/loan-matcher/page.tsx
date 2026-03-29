@@ -83,7 +83,7 @@ export default function LoanMatcher() {
 - Loan Required: ₹${formData.loanAmount}, Business Age: ${formData.businessAge} yrs, Credit Score: ${formData.creditScore}
 - GST Filed: ${formData.gstSubmitted ? 'Yes' : 'No'}, Collateral: ${formData.collateralProvided ? 'Yes' : 'No'}
 Provide: 1. Eligibility & recommended loan type. 2. Relevant Indian govt schemes (Mudra, MSME, CGTMSE, Stand-Up India, PM SVANidhi). 3. Professional recommendation with strengths/concerns. Format with Markdown.`;
-      const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
+      const response = await ai.models.generateContent({ model: 'gemini-1.5-flash', contents: prompt });
       const parts = response.candidates?.[0]?.content?.parts;
       setResult(parts ? parts.filter((p) => p.text).map((p) => p.text).join('\n') : 'No response generated.');
     } catch { setResult('An error occurred. Please try again.'); }

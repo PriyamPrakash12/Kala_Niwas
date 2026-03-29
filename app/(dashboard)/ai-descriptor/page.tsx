@@ -40,7 +40,7 @@ export default function AIDescriptor() {
       } else {
         prompt = `You are a business consultant. Write a professional elevator pitch based on these details: ${formData.details}. Make it trustworthy and appealing to investors or partners.`;
       }
-      const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
+      const response = await ai.models.generateContent({ model: 'gemini-1.5-flash', contents: prompt });
       const parts = response.candidates?.[0]?.content?.parts;
       setResult(parts ? parts.filter((p) => p.text).map((p) => p.text).join('\n') : 'No response generated.');
     } catch {
