@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
         // ── Text-only request (AI Descriptor, Loan Matcher, Pricing, Help chat) ──
         if (!type || type === 'text') {
             const res = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
         // ── Image analysis (text output from image) ──
         if (type === 'image_analyze') {
             const res = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
         // ── Image enhancement (image in → image out) ──
         if (type === 'image_enhance') {
             const res = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
