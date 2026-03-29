@@ -2,18 +2,18 @@
 
 import { useState, useRef } from 'react';
 import { Loader2, Image as ImageIcon, UploadCloud, Sparkles, Tag, Download, RefreshCw } from 'lucide-react';
-import { GoogleGenAI } from '@google/genai';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 const Markdown = dynamic(() => import('react-markdown'), { ssr: false });
 
 export default function ImageEnhancer() {
-  const [loading, setLoading] = useState(false);
-  const [resultImage, setResultImage] = useState<string | null>(null);
-  const [originalImage, setOriginalImage] = useState<string | null>(null);
-  const [mimeType, setMimeType] = useState<string | null>(null);
+  const [loading,        setLoading]        = useState(false);
+  const [resultImage,    setResultImage]    = useState<string | null>(null);
+  const [originalImage,  setOriginalImage]  = useState<string | null>(null);
+  const [mimeType,       setMimeType]       = useState<string | null>(null);
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
-  const [dragOver, setDragOver] = useState(false);
+  const [dragOver,       setDragOver]       = useState(false);
+  const [error,          setError]          = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = (file: File) => {
@@ -23,43 +23,78 @@ export default function ImageEnhancer() {
       setOriginalImage(reader.result as string);
       setResultImage(null);
       setAnalysisResult(null);
+      setError(null);
     };
     reader.readAsDataURL(file);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; if (file) handleFile(file);
+    const file = e.target.files?.[0];
+    if (file) handleFile(file);
   };
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault(); setDragOver(false);
-    const file = e.dataTransfer.files?.[0]; if (file) handleFile(file);
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFile(file);
   };
 
   const handleEnhance = async () => {
     if (!originalImage || !mimeType) return;
-    setLoading(true); setResultImage(null); setAnalysisResult(null);
+    setLoading(true);
+    setResultImage(null);
+    setAnalysisResult(null);
+    setError(null);
+
+    const base64Data = originalImage.split(',')[1];
+
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY! });
-      const base64Data = originalImage.split(',')[1];
-      const [enhanceResponse, analysisResponse] = await Promise.all([
-        ai.models.generateContent({
-          model: 'gemini-1.5-flash-image',
-          contents: { parts: [{ inlineData: { data: base64Data, mimeType } }, { text: 'Enhance this product image. Make it look professional, well-lit, high quality, suitable for an e-commerce store. Keep the main product intact but improve the lighting, background, and overall appeal.' }] },
+      // Run analysis and enhancement in parallel
+      const [analyzeRes, enhanceRes] = await Promise.all([
+        fetch('/api/ai', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type:        'image_analyze',
+            imageBase64: base64Data,
+            mimeType,
+            prompt: 'Analyze this product image. Provide: 1. A compelling e-commerce product description. 2. A suggested price range in INR (₹) with brief justification. Format clearly using Markdown.',
+          }),
         }),
-        ai.models.generateContent({
-          model: 'gemini-3.1-pro-preview',
-          contents: { parts: [{ inlineData: { data: base64Data, mimeType } }, { text: 'Analyze this product image. Provide: 1. A compelling e-commerce product description. 2. A suggested price range in INR (₹) with brief justification. Format clearly using Markdown.' }] },
+        fetch('/api/ai', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type:        'image_enhance',
+            imageBase64: base64Data,
+            mimeType,
+          }),
         }),
       ]);
-      const parts = enhanceResponse.candidates?.[0]?.content?.parts;
-      const imagePart = parts?.find((p) => p.inlineData);
-      if (imagePart?.inlineData) setResultImage(`data:image/png;base64,${imagePart.inlineData.data}`);
-      const aParts = analysisResponse.candidates?.[0]?.content?.parts;
-      setAnalysisResult(aParts?.find((p) => p.text)?.text || 'No analysis generated.');
-    } catch (err) {
-      console.error(err); alert('Failed to enhance image. Please try again.');
-    } finally { setLoading(false); }
+
+      const analyzeData = await analyzeRes.json();
+      const enhanceData = await enhanceRes.json();
+
+      // Set analysis result
+      if (analyzeRes.ok && analyzeData.text) {
+        setAnalysisResult(analyzeData.text);
+      }
+
+      // Set enhanced image (may not be available if model doesn't support it)
+      if (enhanceRes.ok && enhanceData.imageBase64) {
+        setResultImage(`data:image/png;base64,${enhanceData.imageBase64}`);
+      } else {
+        // Enhancement failed or not available — show original with message
+        setError(enhanceData.error ?? 'Image enhancement is currently unavailable. Analysis below is still available.');
+        setResultImage(originalImage); // show original as fallback
+      }
+
+    } catch (err: any) {
+      setError(err.message ?? 'Failed to process image. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -83,7 +118,6 @@ export default function ImageEnhancer() {
           <div style={{ position:'absolute', bottom:'-60px', right:'-60px', width:'300px', height:'300px', borderRadius:'50%', background:'radial-gradient(circle,rgba(0,229,255,0.07) 0%,transparent 70%)', pointerEvents:'none' }} />
 
           <div className="max-w-4xl mx-auto relative z-10">
-            {/* Header */}
             <div className="flex items-center gap-3 mb-10">
               <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background:'rgba(59,130,246,0.15)', border:'1px solid rgba(59,130,246,0.3)' }}>
                 <ImageIcon className="w-5 h-5 text-blue-400" />
@@ -94,7 +128,6 @@ export default function ImageEnhancer() {
               </div>
             </div>
 
-            {/* Main card */}
             <div style={{ background:'rgba(17,31,42,0.9)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'20px', padding:'24px' }}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
@@ -106,16 +139,12 @@ export default function ImageEnhancer() {
                   </div>
 
                   {!originalImage ? (
-                      <div
-                          onClick={() => fileInputRef.current?.click()}
-                          onDrop={handleDrop}
-                          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                          onDragLeave={() => setDragOver(false)}
-                          className="relative rounded-xl flex flex-col items-center justify-center text-center cursor-pointer transition-all"
-                          style={{
-                            height:'240px', border:`2px dashed ${dragOver ? '#3b82f6' : 'rgba(59,130,246,0.3)'}`,
-                            background: dragOver ? 'rgba(59,130,246,0.06)' : 'rgba(13,27,36,0.6)',
-                          }}>
+                      <div onClick={() => fileInputRef.current?.click()}
+                           onDrop={handleDrop}
+                           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                           onDragLeave={() => setDragOver(false)}
+                           className="relative rounded-xl flex flex-col items-center justify-center text-center cursor-pointer transition-all"
+                           style={{ height:'240px', border:`2px dashed ${dragOver ? '#3b82f6' : 'rgba(59,130,246,0.3)'}`, background: dragOver ? 'rgba(59,130,246,0.06)' : 'rgba(13,27,36,0.6)' }}>
                         <UploadCloud className="w-10 h-10 mb-3 text-blue-500/60" />
                         <p className="text-sm font-semibold text-slate-300">Drop image or click to upload</p>
                         <p className="text-xs text-slate-600 mt-1">JPG, PNG supported</p>
@@ -135,10 +164,16 @@ export default function ImageEnhancer() {
 
                   <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
 
+                  {error && (
+                      <div className="mt-3 p-3 rounded-lg text-sm" style={{ background:'rgba(234,179,8,0.08)', border:'1px solid rgba(234,179,8,0.25)', color:'#fbbf24' }}>
+                        ⚠ {error}
+                      </div>
+                  )}
+
                   <button onClick={handleEnhance} disabled={loading || !originalImage}
                           className="w-full mt-4 py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all"
                           style={{ background: !originalImage ? 'rgba(59,130,246,0.25)' : loading ? 'rgba(59,130,246,0.6)' : '#3b82f6', color:'white', cursor: !originalImage || loading ? 'not-allowed' : 'pointer', boxShadow: originalImage && !loading ? '0 0 20px rgba(59,130,246,0.3)' : 'none' }}>
-                    {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Enhancing...</> : <><Sparkles className="w-4 h-4" /> Enhance Image</>}
+                    {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</> : <><Sparkles className="w-4 h-4" /> Analyse & Enhance</>}
                   </button>
                 </div>
 
@@ -150,7 +185,8 @@ export default function ImageEnhancer() {
                     {resultImage && <span className="text-xs px-2 py-0.5 rounded-full" style={{ background:'rgba(0,229,255,0.12)', color:'#00e5ff' }}>Ready</span>}
                   </div>
 
-                  <div className="rounded-xl flex items-center justify-center relative overflow-hidden" style={{ height:'240px', background:'rgba(13,27,36,0.6)', border:`1px solid ${resultImage ? 'rgba(0,229,255,0.2)' : 'rgba(255,255,255,0.05)'}` }}>
+                  <div className="rounded-xl flex items-center justify-center relative overflow-hidden"
+                       style={{ height:'240px', background:'rgba(13,27,36,0.6)', border:`1px solid ${resultImage ? 'rgba(0,229,255,0.2)' : 'rgba(255,255,255,0.05)'}` }}>
                     {loading ? (
                         <div className="loading-shimmer absolute inset-0 flex flex-col items-center justify-center">
                           <Sparkles className="w-8 h-8 text-blue-400 animate-pulse mb-2" />
@@ -170,10 +206,11 @@ export default function ImageEnhancer() {
                       <a href={resultImage} download="enhanced-product.png"
                          className="w-full mt-4 py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all"
                          style={{ background:'rgba(0,229,255,0.1)', border:'1px solid rgba(0,229,255,0.25)', color:'#00e5ff', display:'flex' }}>
-                        <Download className="w-4 h-4" /> Download Enhanced
+                        <Download className="w-4 h-4" /> Download
                       </a>
                   ) : (
-                      <div className="mt-4 py-3 rounded-xl text-center text-xs text-slate-600" style={{ border:'1px solid rgba(255,255,255,0.04)', background:'rgba(255,255,255,0.02)' }}>
+                      <div className="mt-4 py-3 rounded-xl text-center text-xs text-slate-600"
+                           style={{ border:'1px solid rgba(255,255,255,0.04)', background:'rgba(255,255,255,0.02)' }}>
                         Upload an image to get started
                       </div>
                   )}
@@ -181,7 +218,6 @@ export default function ImageEnhancer() {
               </div>
             </div>
 
-            {/* Analysis */}
             {analysisResult && (
                 <div className="fade-up mt-6" style={{ background:'rgba(17,31,42,0.9)', border:'1px solid rgba(59,130,246,0.25)', borderRadius:'20px', padding:'24px' }}>
                   <div className="flex items-center gap-3 mb-5">

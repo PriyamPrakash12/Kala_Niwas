@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { UploadCloud, Loader2, TrendingUp, ArrowRight } from 'lucide-react';
-import { GoogleGenAI } from '@google/genai';
 import dynamic from 'next/dynamic';
 const Markdown = dynamic(() => import('react-markdown'), { ssr: false });
 
@@ -62,7 +61,8 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
 
 export default function LoanMatcher() {
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
+  const [result,  setResult]  = useState<string | null>(null);
+  const [error,   setError]   = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({
     businessName: '', businessType: '', monthlyIncome: '', monthlyExpenses: '',
     existingEmi: '', loanAmount: '', businessAge: '', creditScore: '', gstSubmitted: false, collateralProvided: false,
@@ -74,24 +74,37 @@ export default function LoanMatcher() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); setLoading(true); setResult(null);
-    try {
-      const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY! });
-      const prompt = `You are an AI financial assistant for Indian small business owners. Analyze:
+    e.preventDefault();
+    setLoading(true);
+    setResult(null);
+    setError(null);
+
+    const prompt = `You are an AI financial assistant for Indian small business owners. Analyze:
 - Business: ${formData.businessName} (${formData.businessType})
 - Monthly Income: ₹${formData.monthlyIncome}, Expenses: ₹${formData.monthlyExpenses}, EMI: ₹${formData.existingEmi}
 - Loan Required: ₹${formData.loanAmount}, Business Age: ${formData.businessAge} yrs, Credit Score: ${formData.creditScore}
 - GST Filed: ${formData.gstSubmitted ? 'Yes' : 'No'}, Collateral: ${formData.collateralProvided ? 'Yes' : 'No'}
 Provide: 1. Eligibility & recommended loan type. 2. Relevant Indian govt schemes (Mudra, MSME, CGTMSE, Stand-Up India, PM SVANidhi). 3. Professional recommendation with strengths/concerns. Format with Markdown.`;
-      const response = await ai.models.generateContent({ model: 'gemini-1.5-flash', contents: prompt });
-      const parts = response.candidates?.[0]?.content?.parts;
-      setResult(parts ? parts.filter((p) => p.text).map((p) => p.text).join('\n') : 'No response generated.');
-    } catch { setResult('An error occurred. Please try again.'); }
-    finally { setLoading(false); }
+
+    try {
+      const res = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'text', prompt }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Server error');
+      setResult(data.text);
+    } catch (err: any) {
+      setError(err.message ?? 'Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const netFlow = formData.monthlyIncome && formData.monthlyExpenses
-      ? Number(formData.monthlyIncome) - Number(formData.monthlyExpenses) - Number(formData.existingEmi || 0) : null;
+      ? Number(formData.monthlyIncome) - Number(formData.monthlyExpenses) - Number(formData.existingEmi || 0)
+      : null;
 
   return (
       <>
@@ -113,7 +126,6 @@ Provide: 1. Eligibility & recommended loan type. 2. Relevant Indian govt schemes
           <div style={{ position:'absolute', bottom:'-80px', left:'-80px', width:'350px', height:'350px', borderRadius:'50%', background:'radial-gradient(circle,rgba(20,184,166,0.08) 0%,transparent 70%)', pointerEvents:'none' }} />
 
           <div className="max-w-3xl mx-auto relative z-10">
-            {/* Header */}
             <div className="flex items-center gap-3 mb-10">
               <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background:'rgba(0,229,255,0.12)', border:'1px solid rgba(0,229,255,0.25)' }}>
                 <TrendingUp className="w-5 h-5 text-cyan-400" />
@@ -124,13 +136,12 @@ Provide: 1. Eligibility & recommended loan type. 2. Relevant Indian govt schemes
               </div>
             </div>
 
-            {/* Live preview strip */}
             {netFlow !== null && (
                 <div className="fade-up mb-6 grid grid-cols-3 gap-3">
                   {[
-                    { label: 'Monthly Income', value: `₹${Number(formData.monthlyIncome).toLocaleString('en-IN')}`, color: '#22c55e' },
+                    { label: 'Monthly Income',   value: `₹${Number(formData.monthlyIncome).toLocaleString('en-IN')}`, color: '#22c55e' },
                     { label: 'Monthly Expenses', value: `₹${(Number(formData.monthlyExpenses) + Number(formData.existingEmi||0)).toLocaleString('en-IN')}`, color: '#f97316' },
-                    { label: 'Net Cash Flow', value: `₹${netFlow.toLocaleString('en-IN')}`, color: netFlow >= 0 ? '#00e5ff' : '#ef4444' },
+                    { label: 'Net Cash Flow',    value: `₹${netFlow.toLocaleString('en-IN')}`, color: netFlow >= 0 ? '#00e5ff' : '#ef4444' },
                   ].map((m) => (
                       <div key={m.label} className="rounded-xl p-3" style={{ background:'rgba(17,31,42,0.9)', border:'1px solid rgba(255,255,255,0.06)' }}>
                         <div className="text-xs text-slate-500 mb-1">{m.label}</div>
@@ -142,8 +153,6 @@ Provide: 1. Eligibility & recommended loan type. 2. Relevant Indian govt schemes
 
             <form onSubmit={handleSubmit}>
               <div style={{ background:'rgba(17,31,42,0.9)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'20px', padding:'24px' }}>
-
-                {/* Business info */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   <TextInput label="Business Name" name="businessName" value={formData.businessName} onChange={handleInputChange} />
                   <div>
@@ -160,15 +169,13 @@ Provide: 1. Eligibility & recommended loan type. 2. Relevant Indian govt schemes
                   </div>
                 </div>
 
-                {/* Financials */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  <CurrencyInput label="Monthly Income" name="monthlyIncome" value={formData.monthlyIncome} onChange={handleInputChange} placeholder="45000" />
-                  <CurrencyInput label="Monthly Expenses" name="monthlyExpenses" value={formData.monthlyExpenses} onChange={handleInputChange} placeholder="25000" />
-                  <CurrencyInput label="Existing EMI" name="existingEmi" value={formData.existingEmi} onChange={handleInputChange} placeholder="0" />
-                  <CurrencyInput label="Loan Amount Required" name="loanAmount" value={formData.loanAmount} onChange={handleInputChange} placeholder="200000" />
+                  <CurrencyInput label="Monthly Income"        name="monthlyIncome"   value={formData.monthlyIncome}   onChange={handleInputChange} placeholder="45000" />
+                  <CurrencyInput label="Monthly Expenses"      name="monthlyExpenses" value={formData.monthlyExpenses} onChange={handleInputChange} placeholder="25000" />
+                  <CurrencyInput label="Existing EMI"          name="existingEmi"     value={formData.existingEmi}     onChange={handleInputChange} placeholder="0" />
+                  <CurrencyInput label="Loan Amount Required"  name="loanAmount"      value={formData.loanAmount}      onChange={handleInputChange} placeholder="200000" />
                 </div>
 
-                {/* Details */}
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-widest mb-2" style={{ color:'#00e5ff' }}>Business Age (Years)</label>
@@ -176,7 +183,7 @@ Provide: 1. Eligibility & recommended loan type. 2. Relevant Indian govt schemes
                            className="w-full text-sm text-white rounded-xl px-4 py-3 outline-none transition-all"
                            style={{ background:'rgba(13,27,36,0.7)', border:'1px solid rgba(255,255,255,0.07)' }}
                            onFocus={(e) => { e.target.style.borderColor='#00e5ff'; e.target.style.boxShadow='0 0 0 3px rgba(0,229,255,0.1)'; }}
-                           onBlur={(e) => { e.target.style.borderColor='rgba(255,255,255,0.07)'; e.target.style.boxShadow='none'; }}
+                           onBlur={(e)  => { e.target.style.borderColor='rgba(255,255,255,0.07)'; e.target.style.boxShadow='none'; }}
                     />
                   </div>
                   <div>
@@ -185,16 +192,21 @@ Provide: 1. Eligibility & recommended loan type. 2. Relevant Indian govt schemes
                            className="w-full text-sm text-white rounded-xl px-4 py-3 outline-none transition-all"
                            style={{ background:'rgba(13,27,36,0.7)', border:'1px solid rgba(255,255,255,0.07)' }}
                            onFocus={(e) => { e.target.style.borderColor='#00e5ff'; e.target.style.boxShadow='0 0 0 3px rgba(0,229,255,0.1)'; }}
-                           onBlur={(e) => { e.target.style.borderColor='rgba(255,255,255,0.07)'; e.target.style.boxShadow='none'; }}
+                           onBlur={(e)  => { e.target.style.borderColor='rgba(255,255,255,0.07)'; e.target.style.boxShadow='none'; }}
                     />
                   </div>
                 </div>
 
-                {/* Toggles */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
-                  <Toggle label="GST / Tax Returns Filed" checked={formData.gstSubmitted} onChange={() => setFormData({ ...formData, gstSubmitted: !formData.gstSubmitted })} />
-                  <Toggle label="Collateral Available" checked={formData.collateralProvided} onChange={() => setFormData({ ...formData, collateralProvided: !formData.collateralProvided })} />
+                  <Toggle label="GST / Tax Returns Filed" checked={formData.gstSubmitted}      onChange={() => setFormData({ ...formData, gstSubmitted: !formData.gstSubmitted })} />
+                  <Toggle label="Collateral Available"    checked={formData.collateralProvided} onChange={() => setFormData({ ...formData, collateralProvided: !formData.collateralProvided })} />
                 </div>
+
+                {error && (
+                    <div className="mb-4 p-3 rounded-lg text-sm" style={{ background:'rgba(244,63,94,0.1)', border:'1px solid rgba(244,63,94,0.3)', color:'#f87171' }}>
+                      ⚠ {error}
+                    </div>
+                )}
 
                 <button type="submit" disabled={loading}
                         className="w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all"
@@ -204,7 +216,6 @@ Provide: 1. Eligibility & recommended loan type. 2. Relevant Indian govt schemes
               </div>
             </form>
 
-            {/* Result */}
             {result && (
                 <div className="fade-up mt-6" style={{ background:'rgba(17,31,42,0.9)', border:'1px solid rgba(0,229,255,0.2)', borderRadius:'20px', padding:'24px' }}>
                   <div className="flex items-center gap-2 mb-5">
@@ -215,7 +226,6 @@ Provide: 1. Eligibility & recommended loan type. 2. Relevant Indian govt schemes
                 </div>
             )}
 
-            {/* Document upload */}
             <div className="mt-6" style={{ background:'rgba(17,31,42,0.6)', border:'1px solid rgba(255,255,255,0.05)', borderRadius:'20px', padding:'20px' }}>
               <p className="text-sm font-semibold text-white mb-3">Document Upload</p>
               <div className="rounded-xl flex flex-col items-center justify-center text-center cursor-pointer transition-all py-8"

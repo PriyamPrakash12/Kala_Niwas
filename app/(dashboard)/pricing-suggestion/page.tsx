@@ -2,46 +2,58 @@
 
 import { useState } from 'react';
 import { Loader2, IndianRupee, TrendingUp, Copy, Check } from 'lucide-react';
-import { GoogleGenAI } from '@google/genai';
 import dynamic from 'next/dynamic';
 const Markdown = dynamic(() => import('react-markdown'), { ssr: false });
 
 const MARKETS = [
-  { value: 'Local Village/Town', label: 'Local / Town', icon: '🏘️' },
-  { value: 'Urban Middle Class', label: 'Urban Middle', icon: '🏙️' },
-  { value: 'Premium/Boutique', label: 'Premium', icon: '💎' },
-  { value: 'Online (E-commerce)', label: 'E-commerce', icon: '🛒' },
-  { value: 'Wholesale/B2B', label: 'Wholesale', icon: '📦' },
+  { value: 'Local Village/Town',  label: 'Local / Town',  icon: '🏘️' },
+  { value: 'Urban Middle Class',  label: 'Urban Middle',  icon: '🏙️' },
+  { value: 'Premium/Boutique',    label: 'Premium',       icon: '💎' },
+  { value: 'Online (E-commerce)', label: 'E-commerce',    icon: '🛒' },
+  { value: 'Wholesale/B2B',       label: 'Wholesale',     icon: '📦' },
 ];
 
 export default function PricingSuggestion() {
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [result,  setResult]  = useState<string | null>(null);
+  const [copied,  setCopied]  = useState(false);
+  const [error,   setError]   = useState<string | null>(null);
   const [formData, setFormData] = useState({
     productName: '', materialCost: '', laborCost: '', competitorPrice: '', targetMarket: '',
   });
 
-  const totalCost = (Number(formData.materialCost) || 0) + (Number(formData.laborCost) || 0);
-  const suggestedMin = totalCost > 0 ? Math.round(totalCost * 1.3) : null;
-  const suggestedMax = totalCost > 0 ? Math.round(totalCost * 2.2) : null;
+  const totalCost    = (Number(formData.materialCost) || 0) + (Number(formData.laborCost) || 0);
+  const suggestedMin = totalCost > 0 ? Math.round(totalCost * 1.3)  : null;
+  const suggestedMax = totalCost > 0 ? Math.round(totalCost * 2.2)  : null;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); setLoading(true); setResult(null);
-    try {
-      const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY! });
-      const prompt = `You are an expert pricing strategist for Indian small businesses.
+    e.preventDefault();
+    setLoading(true);
+    setResult(null);
+    setError(null);
+
+    const prompt = `You are an expert pricing strategist for Indian small businesses.
 Analyze: Product: ${formData.productName}, Material Cost: ₹${formData.materialCost}, Labor Cost: ₹${formData.laborCost}, Competitor Price: ₹${formData.competitorPrice || 'Unknown'}, Target Market: ${formData.targetMarket}.
 Provide: 1. Recommended Price Range (₹). 2. Pricing Strategy rationale. 3. Profit Margin Analysis. 4. Marketing tips to justify the price. Format with Markdown.`;
-      const response = await ai.models.generateContent({ model: 'gemini-1.5-flash', contents: prompt });
-      const parts = response.candidates?.[0]?.content?.parts;
-      setResult(parts ? parts.filter((p) => p.text).map((p) => p.text).join('\n') : 'No analysis generated.');
-    } catch { setResult('An error occurred. Please try again.'); }
-    finally { setLoading(false); }
+
+    try {
+      const res = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'text', prompt }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Server error');
+      setResult(data.text);
+    } catch (err: any) {
+      setError(err.message ?? 'Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCopy = () => {
@@ -69,7 +81,6 @@ Provide: 1. Recommended Price Range (₹). 2. Pricing Strategy rationale. 3. Pro
           <div style={{ position:'absolute', bottom:'-80px', left:'-80px', width:'350px', height:'350px', borderRadius:'50%', background:'radial-gradient(circle,rgba(249,115,22,0.06) 0%,transparent 70%)', pointerEvents:'none' }} />
 
           <div className="max-w-2xl mx-auto relative z-10">
-            {/* Header */}
             <div className="flex items-center gap-3 mb-10">
               <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background:'rgba(234,179,8,0.12)', border:'1px solid rgba(234,179,8,0.3)' }}>
                 <IndianRupee className="w-5 h-5 text-yellow-400" />
@@ -80,13 +91,12 @@ Provide: 1. Recommended Price Range (₹). 2. Pricing Strategy rationale. 3. Pro
               </div>
             </div>
 
-            {/* Live cost preview */}
             {totalCost > 0 && (
                 <div className="fade-up grid grid-cols-3 gap-3 mb-6">
                   {[
-                    { label: 'Total Cost', value: `₹${totalCost.toLocaleString('en-IN')}`, color: '#94a3b8' },
-                    { label: 'Min Price (30% margin)', value: `₹${suggestedMin!.toLocaleString('en-IN')}`, color: '#facc15' },
-                    { label: 'Max Price (120% margin)', value: `₹${suggestedMax!.toLocaleString('en-IN')}`, color: '#00e5ff' },
+                    { label: 'Total Cost',              value: `₹${totalCost.toLocaleString('en-IN')}`,        color: '#94a3b8' },
+                    { label: 'Min Price (30% margin)',  value: `₹${suggestedMin!.toLocaleString('en-IN')}`,    color: '#facc15' },
+                    { label: 'Max Price (120% margin)', value: `₹${suggestedMax!.toLocaleString('en-IN')}`,    color: '#00e5ff' },
                   ].map((m) => (
                       <div key={m.label} className="rounded-xl p-3" style={{ background:'rgba(17,31,42,0.9)', border:'1px solid rgba(255,255,255,0.06)' }}>
                         <div className="text-xs text-slate-500 mb-1">{m.label}</div>
@@ -98,8 +108,6 @@ Provide: 1. Recommended Price Range (₹). 2. Pricing Strategy rationale. 3. Pro
 
             <form onSubmit={handleSubmit}>
               <div style={{ background:'rgba(17,31,42,0.9)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'20px', padding:'24px' }}>
-
-                {/* Product name */}
                 <div className="mb-5">
                   <label className="block text-xs font-semibold uppercase tracking-widest mb-2" style={{ color:'#facc15' }}>Product Name & Description</label>
                   <textarea name="productName" value={formData.productName} onChange={handleInputChange} required rows={2}
@@ -107,34 +115,32 @@ Provide: 1. Recommended Price Range (₹). 2. Pricing Strategy rationale. 3. Pro
                             className="w-full text-sm text-white rounded-xl px-4 py-3 resize-none transition-all"
                             style={{ background:'rgba(13,27,36,0.7)', border:'1px solid rgba(255,255,255,0.07)' }}
                             onFocus={(e) => { e.target.style.borderColor='#facc15'; e.target.style.boxShadow='0 0 0 3px rgba(234,179,8,0.1)'; }}
-                            onBlur={(e) => { e.target.style.borderColor='rgba(255,255,255,0.07)'; e.target.style.boxShadow='none'; }}
+                            onBlur={(e)  => { e.target.style.borderColor='rgba(255,255,255,0.07)'; e.target.style.boxShadow='none'; }}
                   />
                 </div>
 
-                {/* Costs */}
                 <div className="grid grid-cols-2 gap-4 mb-5">
                   {[
-                    { name:'materialCost', label:'Material Cost (₹)', placeholder:'150' },
-                    { name:'laborCost', label:'Labor / Time Cost (₹)', placeholder:'200' },
-                    { name:'competitorPrice', label:'Competitor Price (₹) — Optional', placeholder:'500' },
+                    { name:'materialCost',    label:'Material Cost (₹)',              placeholder:'150',  required: true },
+                    { name:'laborCost',       label:'Labor / Time Cost (₹)',          placeholder:'200',  required: true },
+                    { name:'competitorPrice', label:'Competitor Price (₹) — Optional',placeholder:'500',  required: false },
                   ].map((f) => (
                       <div key={f.name} className={f.name === 'competitorPrice' ? 'col-span-2 md:col-span-1' : ''}>
                         <label className="block text-xs font-semibold uppercase tracking-widest mb-2" style={{ color:'#facc15' }}>{f.label}</label>
                         <div className="relative">
                           <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-500">₹</span>
-                          <input type="number" name={f.name} value={(formData as Record<string, string>)[f.name]} onChange={handleInputChange}
-                                 placeholder={f.placeholder} required={f.name !== 'competitorPrice'}
+                          <input type="number" name={f.name} value={(formData as Record<string, string>)[f.name]}
+                                 onChange={handleInputChange} placeholder={f.placeholder} required={f.required}
                                  className="w-full text-sm text-white rounded-xl pl-8 pr-4 py-3 outline-none transition-all"
                                  style={{ background:'rgba(13,27,36,0.7)', border:'1px solid rgba(255,255,255,0.07)' }}
                                  onFocus={(e) => { e.target.style.borderColor='#facc15'; e.target.style.boxShadow='0 0 0 3px rgba(234,179,8,0.1)'; }}
-                                 onBlur={(e) => { e.target.style.borderColor='rgba(255,255,255,0.07)'; e.target.style.boxShadow='none'; }}
+                                 onBlur={(e)  => { e.target.style.borderColor='rgba(255,255,255,0.07)'; e.target.style.boxShadow='none'; }}
                           />
                         </div>
                       </div>
                   ))}
                 </div>
 
-                {/* Target market */}
                 <div className="mb-6">
                   <label className="block text-xs font-semibold uppercase tracking-widest mb-3" style={{ color:'#facc15' }}>Target Market</label>
                   <div className="flex flex-wrap gap-2">
@@ -148,6 +154,12 @@ Provide: 1. Recommended Price Range (₹). 2. Pricing Strategy rationale. 3. Pro
                   </div>
                 </div>
 
+                {error && (
+                    <div className="mb-4 p-3 rounded-lg text-sm" style={{ background:'rgba(244,63,94,0.1)', border:'1px solid rgba(244,63,94,0.3)', color:'#f87171' }}>
+                      ⚠ {error}
+                    </div>
+                )}
+
                 <button type="submit" disabled={loading || !formData.productName.trim() || !formData.targetMarket}
                         className="w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all"
                         style={{ background: loading || !formData.productName.trim() || !formData.targetMarket ? 'rgba(234,179,8,0.3)' : '#eab308', color:'#0d1b24', cursor: loading ? 'not-allowed':'pointer', boxShadow: !loading && formData.productName.trim() ? '0 0 20px rgba(234,179,8,0.2)':'none' }}>
@@ -156,7 +168,6 @@ Provide: 1. Recommended Price Range (₹). 2. Pricing Strategy rationale. 3. Pro
               </div>
             </form>
 
-            {/* Result */}
             {result && (
                 <div className="fade-up mt-6" style={{ background:'rgba(17,31,42,0.9)', border:'1px solid rgba(234,179,8,0.25)', borderRadius:'20px', padding:'24px' }}>
                   <div className="flex items-center justify-between mb-5">
