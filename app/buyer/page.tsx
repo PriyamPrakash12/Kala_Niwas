@@ -109,27 +109,10 @@ const SELLERS = [
 ];
 
 // Explicitly typed SEED_PRODUCTS
-const SEED_PRODUCTS: {
-    id: string;
-    name: string;
-    price: number;
-    originalPrice: number;
-    desc: string;
-    inStock: boolean;
-    badge: string;
-    tag: string | null;
-    tagColor: string | null;
-    icon: string;
-    delivery: string;
-    sellerName: string;
-    sellerLocation: string;
-    sellerAccent: string;
-    sellerCategory: string;
-    sellerRating: number;
-    isListed: boolean
-}[] = SELLERS.flatMap(s =>
+const SEED_PRODUCTS: Product[] = SELLERS.flatMap(s =>
     s.products.map(p => ({
         ...p,
+        category:       s.category,
         sellerName:     s.name,
         sellerLocation: s.location,
         sellerAccent:   s.accent,
