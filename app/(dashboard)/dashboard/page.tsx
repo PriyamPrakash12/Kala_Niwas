@@ -438,7 +438,7 @@ function ListProductModal({ onClose, sellerName, sellerLocation }: { onClose:()=
                   ))}
                   <div style={{ padding:'12px 14px', borderRadius:3, background:'rgba(0,229,255,0.04)', border:'1px solid rgba(0,229,255,0.1)', display:'flex', alignItems:'flex-start', gap:8 }}>
                     <FileText style={{ width:14, height:14, color:'#00e5ff', flexShrink:0, marginTop:1 }} />
-                    <span style={{ fontSize:12, color:'#3a6a80', lineHeight:1.6 }}>By listing this product you agree to कलाNiwas's seller terms. Ensure your listing is accurate and your product is ready to ship within the stated time.</span>
+                    <span style={{ fontSize:12, color:'#3a6a80', lineHeight:1.6 }}>By listing this product you agree to कलाNiwas&apos;s seller terms. Ensure your listing is accurate and your product is ready to ship within the stated time.</span>
                   </div>
                 </div>
             )}

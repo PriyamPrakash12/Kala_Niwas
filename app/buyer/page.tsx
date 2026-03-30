@@ -17,78 +17,117 @@ const C = {
     border:'rgba(255,255,255,0.06)', borderHov:'rgba(0,229,255,0.25)',
 };
 
-// ── Same key used by Dashboard.tsx to save listed products ─────────
 const LISTED_PRODUCTS_KEY = 'kalakit_listed_products';
 
-// ── Hardcoded seed sellers & products ─────────────────────────────
+// ── Explicit Product type — tag is string | null, NOT just null ────
+type Product = {
+    id: string;
+    name: string;
+    sellerName: string;
+    sellerLocation: string;
+    sellerAccent: string;
+    sellerCategory: string;
+    sellerRating: number;
+    category: string;
+    price: number;
+    originalPrice: number;
+    desc: string;
+    inStock: boolean;
+    badge: string;
+    tag: string | null;       // ← explicit string | null fixes the TS error
+    tagColor: string | null;  // ← same here
+    icon: string;
+    delivery: string;
+    isListed: boolean;
+};
+
+// ── Seed data ──────────────────────────────────────────────────────
 const SELLERS = [
     {
         id:1, name:'Meena Crafts', location:'Jaipur, Rajasthan',
         accent:'#f97316', category:'handicraft', rating:4.9,
         products:[
-            { id:'mc-1', name:'Blue Pottery Vase',    price:1299, originalPrice:1799, desc:'Hand-thrown blue pottery vase with traditional floral motifs and glazed finish.',     inStock:true,  badge:'Handmade',   tag:'Best Seller', tagColor:'#f97316', icon:'🏺', delivery:'3-5 days' },
-            { id:'mc-2', name:'Block Print Dupatta',  price:649,  originalPrice:899,  desc:'Hand block-printed dupatta in natural dyes on soft cotton fabric.',                  inStock:true,  badge:'Hand Block', tag:'Limited',     tagColor:'#f97316', icon:'🖼️', delivery:'3-5 days' },
-            { id:'mc-3', name:'Lac Bangles Set (12)', price:299,  originalPrice:499,  desc:'Traditional Rajasthani lac bangles, hand-painted with mirror work.',                 inStock:false, badge:'Handmade',   tag:null,          tagColor:null,      icon:'💫', delivery:'3-5 days' },
+            { id:'mc-1', name:'Blue Pottery Vase',    price:1299, originalPrice:1799, desc:'Hand-thrown blue pottery vase with traditional floral motifs and glazed finish.',     inStock:true,  badge:'Handmade',   tag:'Best Seller' as string|null, tagColor:'#f97316' as string|null, icon:'🏺', delivery:'3-5 days' },
+            { id:'mc-2', name:'Block Print Dupatta',  price:649,  originalPrice:899,  desc:'Hand block-printed dupatta in natural dyes on soft cotton fabric.',                  inStock:true,  badge:'Hand Block', tag:'Limited'     as string|null, tagColor:'#f97316' as string|null, icon:'🖼️', delivery:'3-5 days' },
+            { id:'mc-3', name:'Lac Bangles Set (12)', price:299,  originalPrice:499,  desc:'Traditional Rajasthani lac bangles, hand-painted with mirror work.',                 inStock:false, badge:'Handmade',   tag:null          as string|null, tagColor:null       as string|null, icon:'💫', delivery:'3-5 days' },
         ],
     },
     {
         id:2, name:'Silk Route Studio', location:'Varanasi, UP',
         accent:'#a78bfa', category:'textile', rating:4.8,
         products:[
-            { id:'sr-1', name:'Banarasi Silk Saree', price:8499, originalPrice:12000, desc:'Pure Banarasi silk saree with intricate zari brocade border and pallu.',    inStock:true, badge:'Handwoven', tag:'Trending', tagColor:'#a78bfa', icon:'🧵', delivery:'5-7 days' },
-            { id:'sr-2', name:'Brocade Fabric (1m)', price:1499, originalPrice:2000,  desc:'Premium Banarasi brocade fabric per metre, ideal for blouses and dupattas.', inStock:true, badge:'Handwoven', tag:null,       tagColor:null,      icon:'🧣', delivery:'5-7 days' },
-            { id:'sr-3', name:'Zari Dupatta',        price:2199, originalPrice:3000,  desc:'Handwoven zari dupatta with gold thread work on georgette base.',            inStock:true, badge:'Handwoven', tag:null,       tagColor:null,      icon:'✨', delivery:'5-7 days' },
+            { id:'sr-1', name:'Banarasi Silk Saree', price:8499, originalPrice:12000, desc:'Pure Banarasi silk saree with intricate zari brocade border and pallu.',    inStock:true, badge:'Handwoven', tag:'Trending' as string|null, tagColor:'#a78bfa' as string|null, icon:'🧵', delivery:'5-7 days' },
+            { id:'sr-2', name:'Brocade Fabric (1m)', price:1499, originalPrice:2000,  desc:'Premium Banarasi brocade fabric per metre, ideal for blouses and dupattas.', inStock:true, badge:'Handwoven', tag:null       as string|null, tagColor:null       as string|null, icon:'🧣', delivery:'5-7 days' },
+            { id:'sr-3', name:'Zari Dupatta',        price:2199, originalPrice:3000,  desc:'Handwoven zari dupatta with gold thread work on georgette base.',            inStock:true, badge:'Handwoven', tag:null       as string|null, tagColor:null       as string|null, icon:'✨', delivery:'5-7 days' },
         ],
     },
     {
         id:3, name:'Tribal Threads', location:'Bhubaneswar, Odisha',
         accent:'#00e5ff', category:'textile', rating:4.7,
         products:[
-            { id:'tt-1', name:'Sambalpuri Ikat Stole',   price:2199, originalPrice:2800, desc:'Hand-woven Sambalpuri ikat stole using traditional double ikat technique.',  inStock:true,  badge:'Tribal Art', tag:'New', tagColor:'#00e5ff', icon:'🧣', delivery:'4-6 days' },
-            { id:'tt-2', name:'Sambalpuri Saree',        price:4999, originalPrice:7000, desc:'Authentic Sambalpuri ikat saree with traditional bandha pattern.',           inStock:true,  badge:'Tribal Art', tag:null,  tagColor:null,      icon:'🧵', delivery:'4-6 days' },
-            { id:'tt-3', name:'Handloom Cotton Dupatta', price:899,  originalPrice:1200, desc:'Pure cotton handloom dupatta with block print border. Natural dyes.',        inStock:false, badge:'Handloom',   tag:null,  tagColor:null,      icon:'🧶', delivery:'4-6 days' },
+            { id:'tt-1', name:'Sambalpuri Ikat Stole',   price:2199, originalPrice:2800, desc:'Hand-woven Sambalpuri ikat stole using traditional double ikat technique.',  inStock:true,  badge:'Tribal Art', tag:'New' as string|null, tagColor:'#00e5ff' as string|null, icon:'🧣', delivery:'4-6 days' },
+            { id:'tt-2', name:'Sambalpuri Saree',        price:4999, originalPrice:7000, desc:'Authentic Sambalpuri ikat saree with traditional bandha pattern.',           inStock:true,  badge:'Tribal Art', tag:null  as string|null, tagColor:null       as string|null, icon:'🧵', delivery:'4-6 days' },
+            { id:'tt-3', name:'Handloom Cotton Dupatta', price:899,  originalPrice:1200, desc:'Pure cotton handloom dupatta with block print border. Natural dyes.',        inStock:false, badge:'Handloom',   tag:null  as string|null, tagColor:null       as string|null, icon:'🧶', delivery:'4-6 days' },
         ],
     },
     {
         id:4, name:'Dhokra Works', location:'Bastar, Chhattisgarh',
         accent:'#eab308', category:'jewellery', rating:4.9,
         products:[
-            { id:'dw-1', name:'Dhokra Tribal Necklace',    price:3499, originalPrice:4200, desc:'Authentic Dhokra brass necklace using 4000-year-old lost-wax casting technique.',   inStock:true,  badge:'Lost-wax', tag:'Rare', tagColor:'#eab308', icon:'📿', delivery:'6-8 days' },
-            { id:'dw-2', name:'Tribal Earrings (pair)',    price:599,  originalPrice:899,  desc:'Pair of Dhokra brass earrings with traditional geometric patterns.',                inStock:true,  badge:'Lost-wax', tag:null,   tagColor:null,      icon:'💎', delivery:'6-8 days' },
-            { id:'dw-3', name:'Brass Decorative Figurine', price:2499, originalPrice:3200, desc:'Decorative Dhokra brass figurine of a tribal dancer, approx 8 inches tall.',       inStock:false, badge:'Lost-wax', tag:null,   tagColor:null,      icon:'🏆', delivery:'6-8 days' },
+            { id:'dw-1', name:'Dhokra Tribal Necklace',    price:3499, originalPrice:4200, desc:'Authentic Dhokra brass necklace using 4000-year-old lost-wax casting technique.',   inStock:true,  badge:'Lost-wax', tag:'Rare' as string|null, tagColor:'#eab308' as string|null, icon:'📿', delivery:'6-8 days' },
+            { id:'dw-2', name:'Tribal Earrings (pair)',    price:599,  originalPrice:899,  desc:'Pair of Dhokra brass earrings with traditional geometric patterns.',                inStock:true,  badge:'Lost-wax', tag:null   as string|null, tagColor:null       as string|null, icon:'💎', delivery:'6-8 days' },
+            { id:'dw-3', name:'Brass Decorative Figurine', price:2499, originalPrice:3200, desc:'Decorative Dhokra brass figurine of a tribal dancer, approx 8 inches tall.',       inStock:false, badge:'Lost-wax', tag:null   as string|null, tagColor:null       as string|null, icon:'🏆', delivery:'6-8 days' },
         ],
     },
     {
         id:5, name:'Mitti & More', location:'Khurja, UP',
         accent:'#22d3ee', category:'pottery', rating:4.6,
         products:[
-            { id:'mm-1', name:'Ceramic Mug Set (4pc)', price:1599, originalPrice:2000, desc:'Set of 4 hand-thrown glazed ceramic mugs. Microwave and dishwasher safe.', inStock:true, badge:'Glazed', tag:null, tagColor:null, icon:'☕', delivery:'3-5 days' },
-            { id:'mm-2', name:'Glazed Serving Bowl',   price:599,  originalPrice:800,  desc:'Large hand-thrown glazed serving bowl. Food-safe and dishwasher safe.',    inStock:true, badge:'Glazed', tag:null, tagColor:null, icon:'🥣', delivery:'3-5 days' },
-            { id:'mm-3', name:'Ceramic Planter Pot',   price:299,  originalPrice:450,  desc:'Glazed ceramic planter with drainage hole, ideal for succulents.',         inStock:true, badge:'Glazed', tag:null, tagColor:null, icon:'🪴', delivery:'3-5 days' },
+            { id:'mm-1', name:'Ceramic Mug Set (4pc)', price:1599, originalPrice:2000, desc:'Set of 4 hand-thrown glazed ceramic mugs. Microwave and dishwasher safe.', inStock:true, badge:'Glazed', tag:null as string|null, tagColor:null as string|null, icon:'☕', delivery:'3-5 days' },
+            { id:'mm-2', name:'Glazed Serving Bowl',   price:599,  originalPrice:800,  desc:'Large hand-thrown glazed serving bowl. Food-safe and dishwasher safe.',    inStock:true, badge:'Glazed', tag:null as string|null, tagColor:null as string|null, icon:'🥣', delivery:'3-5 days' },
+            { id:'mm-3', name:'Ceramic Planter Pot',   price:299,  originalPrice:450,  desc:'Glazed ceramic planter with drainage hole, ideal for succulents.',         inStock:true, badge:'Glazed', tag:null as string|null, tagColor:null as string|null, icon:'🪴', delivery:'3-5 days' },
         ],
     },
     {
         id:6, name:'Spice Trail Co.', location:'Kochi, Kerala',
         accent:'#22c55e', category:'food', rating:4.8,
         products:[
-            { id:'st-1', name:'Kerala Pepper 500g', price:499, originalPrice:699, desc:'Single-origin Malabar black pepper. Cold-dried to preserve essential oils.', inStock:true, badge:'Organic', tag:'Top Rated', tagColor:'#22c55e', icon:'🌶️', delivery:'2-3 days' },
-            { id:'st-2', name:'Masala Blend Kit',   price:599, originalPrice:799, desc:'Set of 5 signature masala blends — chai, biryani, garam, sambar, rasam.',   inStock:true, badge:'Organic', tag:null,       tagColor:null,      icon:'🫙', delivery:'2-3 days' },
-            { id:'st-3', name:'Cardamom Pods 100g', price:299, originalPrice:399, desc:'Premium green cardamom pods from Idukki. Intense flavour and fragrance.',   inStock:true, badge:'Organic', tag:null,       tagColor:null,      icon:'🌿', delivery:'2-3 days' },
+            { id:'st-1', name:'Kerala Pepper 500g', price:499, originalPrice:699, desc:'Single-origin Malabar black pepper. Cold-dried to preserve essential oils.', inStock:true, badge:'Organic', tag:'Top Rated' as string|null, tagColor:'#22c55e' as string|null, icon:'🌶️', delivery:'2-3 days' },
+            { id:'st-2', name:'Masala Blend Kit',   price:599, originalPrice:799, desc:'Set of 5 signature masala blends — chai, biryani, garam, sambar, rasam.',   inStock:true, badge:'Organic', tag:null       as string|null, tagColor:null       as string|null, icon:'🫙', delivery:'2-3 days' },
+            { id:'st-3', name:'Cardamom Pods 100g', price:299, originalPrice:399, desc:'Premium green cardamom pods from Idukki. Intense flavour and fragrance.',   inStock:true, badge:'Organic', tag:null       as string|null, tagColor:null       as string|null, icon:'🌿', delivery:'2-3 days' },
         ],
     },
     {
         id:7, name:'Bihar Kala Kendra', location:'Madhubani, Bihar',
         accent:'#f472b6', category:'handicraft', rating:4.8,
         products:[
-            { id:'bk-1', name:'Madhubani Painting (A3)', price:2200, originalPrice:3000, desc:'Hand-painted Madhubani art on cotton cloth. Traditional Bihar folk motifs.',      inStock:true, badge:'Folk Art',  tag:'New', tagColor:'#00e5ff', icon:'🎨', delivery:'5-7 days' },
-            { id:'bk-2', name:'Sikki Grass Basket',      price:750,  originalPrice:1000, desc:'Traditional Sikki grass basket with geometric patterns for storage & gifting.', inStock:true, badge:'Handcraft', tag:null,  tagColor:null,      icon:'🧺', delivery:'4-6 days' },
-            { id:'bk-3', name:'Painted Silk Dupatta',    price:2499, originalPrice:3500, desc:'Hand-painted Madhubani motifs on pure silk dupatta. One-of-a-kind piece.',      inStock:true, badge:'Folk Art',  tag:null,  tagColor:null,      icon:'🎭', delivery:'5-7 days' },
+            { id:'bk-1', name:'Madhubani Painting (A3)', price:2200, originalPrice:3000, desc:'Hand-painted Madhubani art on cotton cloth. Traditional Bihar folk motifs.',      inStock:true, badge:'Folk Art',  tag:'New' as string|null, tagColor:'#00e5ff' as string|null, icon:'🎨', delivery:'5-7 days' },
+            { id:'bk-2', name:'Sikki Grass Basket',      price:750,  originalPrice:1000, desc:'Traditional Sikki grass basket with geometric patterns for storage & gifting.', inStock:true, badge:'Handcraft', tag:null  as string|null, tagColor:null       as string|null, icon:'🧺', delivery:'4-6 days' },
+            { id:'bk-3', name:'Painted Silk Dupatta',    price:2499, originalPrice:3500, desc:'Hand-painted Madhubani motifs on pure silk dupatta. One-of-a-kind piece.',      inStock:true, badge:'Folk Art',  tag:null  as string|null, tagColor:null       as string|null, icon:'🎭', delivery:'5-7 days' },
         ],
     },
 ];
 
-// Flat seed products — derived from SELLERS once
-const SEED_PRODUCTS = SELLERS.flatMap(s =>
+// Explicitly typed SEED_PRODUCTS
+const SEED_PRODUCTS: {
+    id: string;
+    name: string;
+    price: number;
+    originalPrice: number;
+    desc: string;
+    inStock: boolean;
+    badge: string;
+    tag: string | null;
+    tagColor: string | null;
+    icon: string;
+    delivery: string;
+    sellerName: string;
+    sellerLocation: string;
+    sellerAccent: string;
+    sellerCategory: string;
+    sellerRating: number;
+    isListed: boolean
+}[] = SELLERS.flatMap(s =>
     s.products.map(p => ({
         ...p,
         sellerName:     s.name,
@@ -123,7 +162,6 @@ const SORT_OPTIONS = [
     { id:'pricedesc', label:'Price ↓' },
 ];
 
-type Product = typeof SEED_PRODUCTS[0];
 type CartItem = { id: string; qty: number };
 
 // ── Product Card ───────────────────────────────────────────────────
@@ -135,9 +173,7 @@ function ProductCard({ p, view, cart, onCart, wishlist, onWishlist }: {
     const [hov, setHov] = useState(false);
     const inCart = cart.some(c => c.id === p.id);
     const inWish = wishlist.includes(p.id);
-    const disc   = p.originalPrice > p.price
-        ? Math.round((1 - p.price / p.originalPrice) * 100)
-        : 0;
+    const disc   = p.originalPrice > p.price ? Math.round((1 - p.price / p.originalPrice) * 100) : 0;
 
     if (view === 'list') return (
         <div onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
@@ -315,8 +351,6 @@ export default function BuyerPage() {
     const [wishlist,       setWishlist]       = useState<string[]>([]);
     const [searchFocused,  setSearchFocused]  = useState(false);
     const [showUserMenu,   setShowUserMenu]   = useState(false);
-
-    // ── Read seller-listed products from localStorage ──────────────
     const [listedProducts, setListedProducts] = useState<Product[]>([]);
 
     useEffect(() => {
@@ -349,13 +383,11 @@ export default function BuyerPage() {
             } catch {}
         };
         load();
-        // Re-read when window regains focus (seller listed in same browser)
         window.addEventListener('focus', load);
         return () => window.removeEventListener('focus', load);
     }, []);
 
-    // ── Merge: listed products at top, then seed products ─────────
-    const ALL_PRODUCTS = useMemo(() => {
+    const ALL_PRODUCTS = useMemo((): Product[] => {
         const listedIds = new Set(listedProducts.map(p => p.id));
         const seeds = SEED_PRODUCTS.filter(p => !listedIds.has(p.id));
         return [...listedProducts, ...seeds];
@@ -371,7 +403,7 @@ export default function BuyerPage() {
     const removeCart = (id: string) => setCart(c => c.filter(x => x.id !== id));
     const toggleWish = (id: string) => setWishlist(w => w.includes(id) ? w.filter(x => x !== id) : [...w, id]);
 
-    const filtered = useMemo(() => {
+    const filtered = useMemo((): Product[] => {
         let list = ALL_PRODUCTS.filter(p => {
             const matchCat   = activeCategory === 'all' || p.sellerCategory === activeCategory;
             const matchState = activeState === 'All India' || p.sellerLocation.toLowerCase().includes(activeState.split(' ')[0].toLowerCase());
@@ -409,12 +441,11 @@ export default function BuyerPage() {
 
             <div className="bp" style={{ minHeight:'100vh', background:C.bg }}>
 
-                {/* ── Nav ── */}
+                {/* Nav */}
                 <div style={{ position:'sticky', top:0, zIndex:50, background:'rgba(13,27,36,0.95)', backdropFilter:'blur(20px)', borderBottom:`1px solid rgba(0,229,255,0.1)`, padding:'0 24px' }}>
                     <div style={{ height:1, position:'absolute', top:0, left:0, right:0, background:`linear-gradient(90deg,transparent,${C.accent}50 35%,${C.accent}28 65%,transparent)` }} />
                     <div style={{ maxWidth:1200, margin:'0 auto', display:'flex', alignItems:'center', gap:16, height:56 }}>
 
-                        {/* Logo */}
                         <div style={{ display:'flex', alignItems:'center', gap:9, flexShrink:0 }}>
                             <div style={{ width:28, height:28, borderRadius:3, background:'rgba(0,229,255,0.15)', border:`1px solid ${C.accentBd}`, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:`0 0 12px rgba(0,229,255,0.25)`, flexShrink:0 }}>
                                 <span style={{ fontSize:14, lineHeight:1 }}>🏛️</span>
@@ -424,7 +455,6 @@ export default function BuyerPage() {
                             </span>
                         </div>
 
-                        {/* Search */}
                         <div style={{ flex:1, position:'relative', maxWidth:560 }}>
                             <Search style={{ position:'absolute', left:12, top:'50%', transform:'translateY(-50%)', width:14, height:14, pointerEvents:'none', color:searchFocused?C.accent:'#1e3a47', transition:'color 0.18s' }} />
                             <input type="text" placeholder="Search products, sellers, locations..." value={query}
@@ -433,7 +463,6 @@ export default function BuyerPage() {
                             {query && <button onClick={() => setQuery('')} style={{ position:'absolute', right:10, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', color:C.dim, cursor:'pointer', fontSize:15, lineHeight:1 }}>×</button>}
                         </div>
 
-                        {/* Right */}
                         <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
                             <button className={`icon-btn${wishlist.length > 0 ? ' active' : ''}`} style={{ width:34, height:34, position:'relative' }}>
                                 <Heart style={{ width:14, height:14, fill:wishlist.length>0?'#f87171':'none', color:wishlist.length>0?'#f87171':undefined }} />
@@ -445,7 +474,6 @@ export default function BuyerPage() {
                             </button>
                             <div style={{ width:1, height:20, background:'rgba(255,255,255,0.08)' }} />
 
-                            {/* User pill */}
                             <div style={{ position:'relative' }}>
                                 <button onClick={() => setShowUserMenu(!showUserMenu)}
                                         style={{ display:'flex', alignItems:'center', gap:8, padding:'5px 10px 5px 6px', borderRadius:4, background:showUserMenu?C.accentDim:'rgba(255,255,255,0.03)', border:`1px solid ${showUserMenu?C.accentBd:C.border}`, cursor:'pointer', transition:'all 0.15s' }}>
@@ -592,17 +620,15 @@ export default function BuyerPage() {
                         </div>
                     )}
 
-                    {/* New listings banner — shown when seller has listed products */}
                     {listedProducts.length > 0 && (
                         <div className="fu1" style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 16px', borderRadius:5, background:'rgba(0,229,255,0.06)', border:`1px solid rgba(0,229,255,0.2)`, marginBottom:16 }}>
-                            <div style={{ width:6, height:6, borderRadius:'50%', background:C.accent, flexShrink:0, animation:'bp-fu 1.5s ease infinite alternate' }} />
+                            <div style={{ width:6, height:6, borderRadius:'50%', background:C.accent, flexShrink:0 }} />
                             <span style={{ fontSize:12, color:C.accent, fontWeight:600 }}>
                                 {listedProducts.length} new product{listedProducts.length > 1 ? 's' : ''} listed by sellers — showing at the top
                             </span>
                         </div>
                     )}
 
-                    {/* Section label */}
                     <div className="fu4" style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
                         <Flame style={{ width:11, height:11, color:C.accent }} />
                         <span className="sl">{activeCategory==='all' && !query ? 'All Products' : 'Results'}</span>
@@ -610,7 +636,6 @@ export default function BuyerPage() {
                         <span style={{ fontSize:11, color:C.dim }}>{filtered.length} items</span>
                     </div>
 
-                    {/* Products grid */}
                     <div className="fu5" style={{
                         display: view==='grid' ? 'grid' : 'flex',
                         flexDirection: view==='list' ? 'column' : undefined,
@@ -631,7 +656,6 @@ export default function BuyerPage() {
                         )}
                     </div>
 
-                    {/* Seller CTA */}
                     {filtered.length > 0 && (
                         <div style={{ marginTop:44, padding:'22px 26px', borderRadius:6, background:C.bgCard, border:`1px solid rgba(0,229,255,0.1)`, display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:16 }}>
                             <div>
