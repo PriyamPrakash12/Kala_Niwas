@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, ArrowRight, Loader2, Store, ShoppingBag } from 'lucide-react';
 import { PageTransition } from '@/components/PageTransition';
+import { useUser } from '@/components/UserContext';
 
 /* ── Epic-style floating label input ── */
 function EpicInput({ id, label, type, required, value, onChange, focused, setFocused, accent, suffix }: {
@@ -52,11 +53,13 @@ function LoginForm() {
     const router       = useRouter();
     const searchParams = useSearchParams();
     const role         = searchParams.get('role') as 'buyer' | 'seller' | null;
+    const { updateUser } = useUser(); // ← pull in updateUser
 
-    const [showPwd,  setShowPwd]  = useState(false);
-    const [loading,  setLoading]  = useState(false);
-    const [focused,  setFocused]  = useState<string | null>(null);
-    const [form,     setForm]     = useState({ username: '', password: '', remember: false });
+    const [showPwd, setShowPwd] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [focused, setFocused] = useState<string | null>(null);
+    const [error,   setError]   = useState('');
+    const [form,    setForm]    = useState({ username: '', password: '', remember: false });
 
     const isBuyer    = role === 'buyer';
     const accent     = isBuyer ? '#a78bfa' : '#0078f2';
@@ -68,26 +71,55 @@ function LoginForm() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        await new Promise(r => setTimeout(r, 1200));
+        setError('');
+
+        await new Promise(r => setTimeout(r, 1000));
+
+        // ── Check if this user signed up before ──────────────────────────
+        const stored = localStorage.getItem('कला_Niwas_user');
+
+        if (stored) {
+            // User exists in localStorage — restore their data as-is
+            const saved = JSON.parse(stored);
+            updateUser(saved); // re-hydrate context with saved profile
+        } else {
+            // No stored user — derive a name from the username/email input
+            // and save it so the dashboard shows the right name
+            const raw       = form.username.trim();
+            const namePart  = raw.includes('@') ? raw.split('@')[0] : raw; // strip domain if email
+            // Capitalise first letter, split on dots/underscores for common email formats
+            const parts     = namePart.split(/[._-]/).map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase());
+            const firstName = parts[0] || 'User';
+            const lastName  = parts[1] || '';
+
+            updateUser({
+                firstName,
+                lastName,
+                email:        raw.includes('@') ? raw : '',
+                location:     'Not specified',
+                businessType: isBuyer ? 'Buyer' : 'Not specified',
+                dob:          'Not specified',
+            });
+        }
+
         router.push(isBuyer ? '/buyer' : '/dashboard');
     };
 
     return (
         <div style={{ minHeight: '100vh', background: '#0f1013', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 16, position: 'relative', overflow: 'hidden' }}>
 
-            {/* ── Background atmosphere ── */}
+            {/* Background atmosphere */}
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(165deg, #0d1829 0%, #0f1013 50%, #0a0c0f 100%)', pointerEvents: 'none' }} />
             <div style={{ position: 'absolute', top: -180, left: -120, width: 700, height: 700, borderRadius: '50%', background: `radial-gradient(ellipse, ${isBuyer ? 'rgba(100,60,200,0.12)' : 'rgba(0,80,200,0.12)'} 0%, transparent 70%)`, pointerEvents: 'none' }} />
             <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px)', backgroundSize: '60px 60px', pointerEvents: 'none' }} />
             <svg style={{ position: 'absolute', top: 0, right: 0, opacity: 0.08, pointerEvents: 'none' }} width="340" height="340" viewBox="0 0 340 340" fill="none">
-                <line x1="340" y1="0" x2="0" y2="340" stroke={accent} strokeWidth="0.5"/>
-                <line x1="340" y1="80" x2="80" y2="340" stroke={accent} strokeWidth="0.5"/>
+                <line x1="340" y1="0"   x2="0"   y2="340" stroke={accent} strokeWidth="0.5"/>
+                <line x1="340" y1="80"  x2="80"  y2="340" stroke={accent} strokeWidth="0.5"/>
                 <line x1="340" y1="160" x2="160" y2="340" stroke={accent} strokeWidth="0.5"/>
             </svg>
-            {/* Top accent line */}
             <div style={{ position: 'fixed', top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg,transparent,${accent}60 40%,${accent}30 70%,transparent)`, zIndex: 20, pointerEvents: 'none' }} />
 
-            {/* ── Logo ── */}
+            {/* Logo */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28, position: 'relative', zIndex: 10 }}>
                 <div style={{ width: 30, height: 30, borderRadius: 3, background: '#0078f2', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 16px rgba(0,120,242,0.5)' }}>
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -102,7 +134,7 @@ function LoginForm() {
         </span>
             </div>
 
-            {/* ── Role badge ── */}
+            {/* Role badge */}
             {role && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 14px', borderRadius: 3, background: accentBg, border: `1px solid ${accentBd}`, marginBottom: 20, position: 'relative', zIndex: 10 }}>
                     <RoleIcon style={{ width: 12, height: 12, color: accent }} />
@@ -112,16 +144,13 @@ function LoginForm() {
                 </div>
             )}
 
-            {/* ── Card ── */}
+            {/* Card */}
             <div style={{ position: 'relative', zIndex: 10, width: '100%', maxWidth: 400 }}>
-                {/* Glow border */}
                 <div style={{ position: 'absolute', inset: -1, borderRadius: 9, background: `linear-gradient(135deg,${accent}28,transparent,${accent}14)`, pointerEvents: 'none' }} />
 
                 <div style={{ position: 'relative', background: 'rgba(11,13,16,0.94)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8, padding: '32px 28px' }}>
-                    {/* Top bar */}
                     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg,${accent},transparent)`, borderRadius: '8px 8px 0 0' }} />
 
-                    {/* Heading */}
                     <div style={{ marginBottom: 26 }}>
                         <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#2a3a50', marginBottom: 6 }}>Sign In</div>
                         <h1 style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, fontSize: 34, textTransform: 'uppercase', letterSpacing: '0.02em', color: '#fff', lineHeight: 1, margin: 0 }}>Welcome Back</h1>
@@ -130,7 +159,6 @@ function LoginForm() {
                         </p>
                     </div>
 
-                    {/* Form */}
                     <form onSubmit={handleSubmit}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                             <EpicInput id="username" label="Username or Email" type="text" required
@@ -156,22 +184,33 @@ function LoginForm() {
                                         style={{ width: 18, height: 18, borderRadius: 2, border: `1px solid ${form.remember ? accent : 'rgba(255,255,255,0.12)'}`, background: form.remember ? accent : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s', boxShadow: form.remember ? `0 0 8px ${accentGlow}` : 'none' }}>
                                     {form.remember && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                                 </button>
-                                <span style={{ fontSize: 12, color: '#3d4a5c', cursor: 'pointer', userSelect: 'none' }} onClick={() => setForm({ ...form, remember: !form.remember })}>
+                                <span style={{ fontSize: 12, color: '#3d4a5c', cursor: 'pointer', userSelect: 'none' }}
+                                      onClick={() => setForm({ ...form, remember: !form.remember })}>
                   Remember me
                 </span>
                             </div>
+
+                            {/* Error */}
+                            {error && (
+                                <div style={{ fontSize: 12, color: '#f87171', padding: '8px 12px', borderRadius: 3, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)' }}>
+                                    {error}
+                                </div>
+                            )}
 
                             {/* Submit */}
                             <button type="submit" disabled={loading}
                                     style={{ width: '100%', height: 46, borderRadius: 4, background: accent, border: 'none', color: '#fff', fontFamily: "'Barlow',sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: loading ? 0.7 : 1, marginTop: 4, boxShadow: `0 4px 20px ${accentGlow}`, transition: 'all 0.18s ease' }}
                                     onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.filter = 'brightness(1.1)'; }}
                                     onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.filter = 'brightness(1)'; }}>
-                                {loading ? <Loader2 style={{ width: 16, height: 16, animation: 'lp-spin 1s linear infinite' }} /> : <><span>Sign In</span><ArrowRight style={{ width: 15, height: 15 }} /></>}
+                                {loading
+                                    ? <Loader2 style={{ width: 16, height: 16, animation: 'lp-spin 1s linear infinite' }} />
+                                    : <><span>Sign In</span><ArrowRight style={{ width: 15, height: 15 }} /></>
+                                }
                             </button>
                         </div>
                     </form>
 
-                    {/* Footer */}
+                    {/* Footer links */}
                     <div style={{ marginTop: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <Link href="#" style={{ fontSize: 12, color: '#2a3a50', textDecoration: 'none', transition: 'color 0.15s' }}
                               onMouseEnter={e => (e.currentTarget.style.color = '#6b7a99')}
