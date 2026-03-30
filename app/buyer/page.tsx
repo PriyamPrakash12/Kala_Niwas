@@ -10,7 +10,7 @@ import {
 import { useUser } from '@/components/UserContext';
 
 // ── MUST match the key used in Dashboard.tsx ──
-const LISTED_PRODUCTS_KEY = 'kalakit_listed_products';
+const LISTED_PRODUCTS_KEY = 'कलाNiwas_listed_products';
 
 const C = {
     bg:'#0d1b24', bgCard:'rgba(17,31,42,0.85)', bgHover:'rgba(0,229,255,0.03)',
