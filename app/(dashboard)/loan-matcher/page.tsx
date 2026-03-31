@@ -77,17 +77,19 @@ export default function LoanMatcher() {
 
     const isSmall = formData.businessSize === 'small';
 
-    const prompt = `You are an AI financial analyst for Indian small businesses. Respond ENTIRELY in structured Markdown tables — NO prose paragraphs except inside table cells. Every section must be a table.
+    const prompt = `You are an AI financial analyst for Indian small businesses.
 
-Business Profile:
-- Name: ${formData.businessName} | Type: ${formData.businessType}
-- Size: ${isSmall ? 'Small (Micro/Small MSME, turnover < ₹5Cr)' : 'Large (Medium/Large MSME, turnover > ₹5Cr)'}
-- Monthly Income: ₹${formData.monthlyIncome} | Expenses: ₹${formData.monthlyExpenses} | EMI: ₹${formData.existingEmi||'0'}
-- Net Cash Flow: ₹${netFlow ?? 'N/A'} | Loan Needed: ₹${formData.loanAmount}
-- Business Age: ${formData.businessAge} yrs | Credit Score: ${formData.creditScore||'Not given'}
-- GST Filed: ${formData.gstSubmitted?'Yes':'No'} | Collateral: ${formData.collateralProvided?'Yes':'No'}
+STRICT RULES:
+- Every section = ONE Markdown table. No paragraphs outside tables.
+- Table cells must use SHORT bullet points (· symbol, max 6 words each).
+- No long sentences inside cells. Split info into 2–3 bullets per cell.
+- Status cells: only emoji + 2–3 word label. Example: ✅ Eligible or ❌ Too high income.
+- Keep all text crisp, scannable, copy-paste friendly.
 
-Generate ALL of the following sections. Each section must be a Markdown table.
+Business:
+Name: ${formData.businessName} | Type: ${formData.businessType} | Size: ${isSmall?'Small MSME <₹5Cr':'Large MSME >₹5Cr'}
+Income: ₹${formData.monthlyIncome} | Expenses: ₹${formData.monthlyExpenses} | EMI: ₹${formData.existingEmi||'0'} | Net: ₹${netFlow??'N/A'}
+Loan: ₹${formData.loanAmount} | Age: ${formData.businessAge}yrs | Score: ${formData.creditScore||'N/A'} | GST: ${formData.gstSubmitted?'Yes':'No'} | Collateral: ${formData.collateralProvided?'Yes':'No'}
 
 ---
 
@@ -95,104 +97,102 @@ Generate ALL of the following sections. Each section must be a Markdown table.
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Monthly Income | ₹${formData.monthlyIncome} | — |
-| Monthly Expenses | ₹${formData.monthlyExpenses} | — |
-| Existing EMI | ₹${formData.existingEmi||'0'} | — |
-| Net Cash Flow | ₹${netFlow ?? 'N/A'} | [✅ Positive / ⚠️ Negative] |
-| FOIR (Existing) | ${foirPct ?? 'N/A'}% | [✅ Below 40% = Good / ⚠️ Above 40% = Review] |
-| Loan Requested | ₹${formData.loanAmount} | — |
-| Credit Score | ${formData.creditScore||'Not provided'} | [✅ 750+ Excellent / ⚠️ 650–749 Fair / ❌ <650 Poor] |
-| Collateral | ${formData.collateralProvided?'Available':'Not available'} | — |
-| GST Compliance | ${formData.gstSubmitted?'Filed':'Not filed'} | — |
+| Monthly Income | ₹${formData.monthlyIncome} | · ${Number(formData.monthlyIncome)>30000?'✅ Adequate':'⚠️ Low income'} |
+| Monthly Expenses | ₹${formData.monthlyExpenses} | · ${Number(formData.monthlyExpenses)<Number(formData.monthlyIncome)*0.7?'✅ Manageable':'⚠️ High outflow'} |
+| Existing EMI | ₹${formData.existingEmi||'0'} | · ${Number(formData.existingEmi||0)===0?'✅ No burden':'⚠️ Existing debt'} |
+| Net Cash Flow | ₹${netFlow??'N/A'} | · ${(netFlow??0)>=0?'✅ Positive flow':'❌ Negative — critical'} |
+| FOIR | ${foirPct??'N/A'}% | · ${(foirPct??0)<40?'✅ Below 40% — Good':'⚠️ Above 40% — Review'} |
+| Loan Requested | ₹${formData.loanAmount} | · [✅ Reasonable / ⚠️ High for income] |
+| Credit Score | ${formData.creditScore||'Not given'} | · [✅ 750+ Excellent / ⚠️ 650–749 Fair / ❌ <650 Poor] |
+| Collateral | ${formData.collateralProvided?'Available':'Not available'} | · ${formData.collateralProvided?'✅ Opens more options':'⚠️ Limits choices'} |
+| GST Filed | ${formData.gstSubmitted?'Yes':'No'} | · ${formData.gstSubmitted?'✅ Stronger application':'⚠️ File GST first'} |
 
 ---
 
-## 🏦 2. Loan Eligibility — Which Loans to Apply For
+## 🏦 2. Loan Eligibility
 
-| # | Scheme | Max Amount | Interest Rate | Collateral | Status | Priority |
-|---|--------|-----------|---------------|-----------|--------|----------|
-| 1 | PM MUDRA (Shishu) | ₹50,000 | 8–12% | None | [✅ Eligible / ❌ Not eligible — reason] | [🥇/🥈/🥉/—] |
-| 2 | PM MUDRA (Kishore) | ₹5 Lakh | 9–14% | None | [✅ / ❌ — reason] | [🥇/🥈/🥉/—] |
-| 3 | PM MUDRA (Tarun) | ₹10 Lakh | 10–14% | Flexible | [✅ / ❌ — reason] | [🥇/🥈/🥉/—] |
-| 4 | PM SVANidhi | ₹50,000 | 7% subsidised | None | [✅ / ❌ — reason] | [🥇/🥈/🥉/—] |
-| 5 | CGTMSE | ₹2 Crore | Market rate | None (govt guarantee) | [✅ / ❌ — reason] | [🥇/🥈/🥉/—] |
-| 6 | Stand-Up India | ₹10L–₹1Cr | Base+3% | Required | [✅ / ❌ — reason] | [🥇/🥈/🥉/—] |
-| 7 | PMEGP | ₹25L (mfg) | Market rate | Flexible | [✅ / ❌ — reason] | [🥇/🥈/🥉/—] |
-| 8 | ECLGS | As per existing loan | Market rate | None | [✅ / ❌ — reason] | [🥇/🥈/🥉/—] |
-
-> Fill Status and Priority based on the actual business profile. Use 🥇 = Top Recommended, 🥈 = Alternative, 🥉 = Possible, — = Not eligible.
+| Scheme | Max Amount | Rate | Collateral | Status | Priority |
+|--------|-----------|------|-----------|--------|----------|
+| PM MUDRA Shishu | ₹50,000 | 8–12% | None | [✅/❌ — 3 words] | [🥇/🥈/🥉/—] |
+| PM MUDRA Kishore | ₹5 Lakh | 9–14% | None | [✅/❌ — 3 words] | [🥇/🥈/🥉/—] |
+| PM MUDRA Tarun | ₹10 Lakh | 10–14% | Flexible | [✅/❌ — 3 words] | [🥇/🥈/🥉/—] |
+| PM SVANidhi | ₹50,000 | 7% | None | [✅/❌ — 3 words] | [🥇/🥈/🥉/—] |
+| CGTMSE | ₹2 Crore | Market | None | [✅/❌ — 3 words] | [🥇/🥈/🥉/—] |
+| Stand-Up India | ₹10L–₹1Cr | Base+3% | Required | [✅/❌ — 3 words] | [🥇/🥈/🥉/—] |
+| PMEGP | ₹25L | Market | Flexible | [✅/❌ — 3 words] | [🥇/🥈/🥉/—] |
+| ECLGS | Per existing | Market | None | [✅/❌ — 3 words] | [🥇/🥈/🥉/—] |
 
 ---
 
-## 🏆 3. Top Recommended Loans
+## 🏆 3. Top Recommended — Apply in This Order
 
-| Rank | Scheme | Why Recommended | Where to Apply | Action |
-|------|--------|----------------|----------------|--------|
-| 🥇 Best | [Scheme name] | [2-line reason specific to this profile] | [Bank/institution] | Apply first |
-| 🥈 Alternative | [Scheme name] | [2-line reason] | [Bank/institution] | Apply second |
-| 🥉 Backup | [Scheme name] | [2-line reason] | [Bank/institution] | Keep as option |
-
----
-
-## 🏦 4. Bank Interest Rate Comparison
-
-| Bank | Product | Rate (p.a.) | Processing Fee | Max Tenure | Best For | Recommendation |
-|------|---------|------------|----------------|-----------|---------|----------------|
-| SBI | SME Loan | 8.65–11.15% | 0.5–1% | 7 yrs | MSMEs with GST | ⭐ Best Rate |
-| Bank of Baroda | MSME Loan | 9.15–11.15% | 0.5% | 7 yrs | Established businesses | ⭐ Good |
-| Punjab National Bank | MSME | 8.85–11.5% | 0.59% | 7 yrs | Small businesses | ⭐ Good |
-| Canara Bank | SME Loan | 9.25–12% | 0.5% | 5 yrs | Artisans, MSME | ✅ Consider |
-| ICICI Bank | Business Loan | 11–16% | 2% | 5 yrs | Fast processing | ✅ Consider |
-| HDFC Bank | Business Loan | 10–22.5% | Up to 2% | 4 yrs | Urban businesses | ⚠️ High rate |
-| Axis Bank | Business Loan | 11.25–17.5% | 1–2% | 5 yrs | Working capital | ⚠️ High rate |
-| MFI / NBFC | Micro Loan | 18–24% | 1–2% | 3 yrs | No bank access | ❌ Last resort |
-
-> 🏆 **Optimal for this profile:** [Recommend specific bank and product based on income, credit score, and loan amount]
+| Rank | Scheme | Why Apply | Where | Documents |
+|------|--------|-----------|-------|-----------|
+| 🥇 Apply First | [Name] | · [reason 1, 4 words] · [reason 2, 4 words] | [Bank name] | · Aadhaar · PAN · GST · Bank stmt |
+| 🥈 Apply Second | [Name] | · [reason 1, 4 words] · [reason 2, 4 words] | [Bank name] | · Aadhaar · PAN · GST |
+| 🥉 Backup Option | [Name] | · [reason 1, 4 words] · [reason 2, 4 words] | [Bank name] | · Aadhaar · PAN |
 
 ---
 
-## 📈 5. Sales Boost — How Loans & Schemes Accelerate Revenue
+## 🏦 4. Bank Rate Comparison
 
-| Loan / Scheme | How It Boosts Sales | Expected Impact | Timeline |
-|--------------|---------------------|----------------|----------|
-| MUDRA Kishore | Buy more inventory → serve more orders → higher monthly revenue | +20–40% revenue | 3–6 months |
-| CGTMSE | Larger working capital → bulk purchasing → lower cost per unit → better margins | +15–30% margin | 6–12 months |
-| PMEGP (subsidy) | Capital subsidy reduces repayment burden → more cash for marketing | +25% sales reach | 6 months |
-| PM SVANidhi | Digital payments integration → Paytm/UPI → new customer segment | +10–20% orders | 1–3 months |
-| SBI SME Loan | Equipment upgrade → faster production → more units sold | +30–50% capacity | 6–12 months |
-| Stand-Up India | Business expansion → new location or product line | +40–60% revenue | 12–18 months |
+| Bank | Product | Rate (p.a.) | Fee | Tenure | Rating |
+|------|---------|------------|-----|--------|--------|
+| SBI | SME Loan | 8.65–11.15% | 0.5–1% | 7 yrs | ⭐⭐⭐ Best |
+| PNB | MSME | 8.85–11.5% | 0.59% | 7 yrs | ⭐⭐⭐ Best |
+| Bank of Baroda | MSME | 9.15–11.15% | 0.5% | 7 yrs | ⭐⭐⭐ Good |
+| Canara Bank | SME | 9.25–12% | 0.5% | 5 yrs | ⭐⭐ Good |
+| ICICI Bank | Business | 11–16% | 2% | 5 yrs | ⭐⭐ Average |
+| HDFC Bank | Business | 10–22.5% | 2% | 4 yrs | ⭐ High rate |
+| Axis Bank | Business | 11.25–17.5% | 1–2% | 5 yrs | ⭐ High rate |
+| MFI/NBFC | Micro | 18–24% | 2% | 3 yrs | ⚠️ Last resort |
 
-> **For ${formData.businessName || 'this business'}:** [Write 1 specific sentence on which loan would most directly boost sales given their business type and income]
+> 🏆 **Best for this profile:** [Bank + product + 1 reason in 6 words]
 
 ---
 
-## 📋 6. Small vs Large Business — Benefits Comparison
+## 📈 5. Sales Boost by Scheme
 
-| Benefit | Small Business (< ₹5Cr) | Large Business (> ₹5Cr) | Applicable Here |
-|---------|------------------------|------------------------|----------------|
-| MUDRA Access | ✅ Up to ₹10L, no collateral | ❌ Not eligible | ${isSmall?'✅ Yes':'❌ No'} |
-| CGTMSE Guarantee | ✅ Up to 85% govt guarantee | ✅ Up to 75% | ✅ Yes |
-| Priority Sector | ✅ Banks mandated to lend | ❌ Not priority | ${isSmall?'✅ Yes':'❌ No'} |
-| Subsidised Interest | ✅ PM SVANidhi 7%, PMEGP subsidy | ❌ Market rate only | ${isSmall?'✅ Yes':'❌ No'} |
-| Loan Ceiling | ⚠️ Lower (MUDRA max ₹10L) | ✅ Up to ₹50Cr+ | — |
-| Documentation | ✅ GST + bank statement sufficient | ❌ Audited financials required | ${isSmall?'✅ Simpler':'⚠️ Complex'} |
-| ECLGS | ⚠️ Eligible if existing borrower | ✅ Full access | Depends |
-| Export Schemes | ❌ Limited | ✅ EXIM Bank, Buyer's Credit | ${isSmall?'❌ No':'✅ Yes'} |
-| Interest Negotiation | ⚠️ Standard rates | ✅ Negotiable with track record | ${isSmall?'⚠️ Limited':'✅ Yes'} |
+| Scheme | Sales Impact | How | Timeline |
+|--------|-------------|-----|----------|
+| MUDRA Kishore | +20–40% revenue | · More inventory · Serve more orders | 3–6 months |
+| CGTMSE | +15–30% margin | · Bulk buying · Lower unit cost | 6–12 months |
+| PMEGP | +25% reach | · Subsidy → cash for marketing | 6 months |
+| SVANidhi | +10–20% orders | · Digital payments · New customers | 1–3 months |
+| SBI SME | +30–50% capacity | · Equipment upgrade · More output | 6–12 months |
+| Stand-Up India | +40–60% revenue | · New location · New product line | 12–18 months |
+
+> **For ${formData.businessName||'this business'}:** [1 sentence — which scheme boosts sales most for their specific type]
+
+---
+
+## 📋 6. Small vs Large — Benefits
+
+| Benefit | Small (<₹5Cr) | Large (>₹5Cr) | This Business |
+|---------|--------------|--------------|--------------|
+| MUDRA | ✅ Up to ₹10L | ❌ Not eligible | ${isSmall?'✅ Yes':'❌ No'} |
+| CGTMSE | ✅ 85% guarantee | ✅ 75% guarantee | ✅ Yes |
+| Priority Sector | ✅ Mandatory lending | ❌ Not priority | ${isSmall?'✅ Yes':'❌ No'} |
+| Subsidised rate | ✅ SVANidhi 7% | ❌ Market only | ${isSmall?'✅ Yes':'❌ No'} |
+| Loan limit | ⚠️ Max ₹10L | ✅ Up to ₹50Cr+ | — |
+| Documentation | ✅ GST + stmt | ❌ Audited books | ${isSmall?'✅ Simpler':'⚠️ Complex'} |
+| ECLGS | ⚠️ If existing | ✅ Full access | Depends |
+| Export schemes | ❌ Limited | ✅ EXIM, Buyer's Credit | ${isSmall?'❌ No':'✅ Yes'} |
+| Rate negotiation | ⚠️ Standard | ✅ Negotiable | ${isSmall?'⚠️ Limited':'✅ Yes'} |
 
 ---
 
 ## ✅ 7. Action Plan
 
-| Step | Action | Timeline | Documents Needed |
-|------|--------|----------|-----------------|
-| 1 | [First thing to do — apply for top recommended scheme] | This week | [List key documents] |
-| 2 | [Second action — improve a weakness, e.g. GST, credit score] | 1 month | [Documents/steps] |
-| 3 | [Third action — alternative loan or subsidy to apply for] | 1–3 months | [Documents] |
-| 4 | [Fourth action — how to use loan to boost sales specifically] | After disbursement | — |
+| Step | Do This | By When | Documents |
+|------|---------|---------|-----------|
+| 1 | [Apply for scheme — 5 words] | This week | · Aadhaar · PAN · GST · 6-mo bank stmt |
+| 2 | [Fix one weakness — 5 words] | 2–4 weeks | · [relevant docs] |
+| 3 | [Second loan to apply — 5 words] | 1–2 months | · [relevant docs] |
+| 4 | [Use loan for sales — 5 words] | After disbursal | · — |
 
 ---
-*Sources: RBI.org.in · mudra.org.in · msme.gov.in · svanidhi.mohua.gov.in · SBI/HDFC/BOB rate cards (indicative, verify before applying)*`;
+*Sources: RBI · mudra.org.in · msme.gov.in · svanidhi.mohua.gov.in · Bank rate cards (indicative)*`;
 
     try {
       const res  = await fetch('/api/ai', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ type:'text', prompt }) });
@@ -216,38 +216,96 @@ Generate ALL of the following sections. Each section must be a Markdown table.
         @keyframes pulse  { 0%,100%{opacity:0.6} 50%{opacity:1} }
         .fade-up { animation:fadeUp 0.4s ease forwards; }
 
-        /* ── Table styles ── */
+        /* ── Result area — scrollable table container ── */
         .prose-result { overflow-x:auto; }
+
         .prose-result h2 {
-          font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:15px;
-          text-transform:uppercase; letter-spacing:0.06em; color:#00e5ff;
-          margin:28px 0 10px; padding-bottom:6px;
+          font-family:'Barlow Condensed',sans-serif;
+          font-weight:800; font-size:14px; text-transform:uppercase;
+          letter-spacing:0.07em; color:#00e5ff;
+          margin:28px 0 8px; padding-bottom:5px;
           border-bottom:1px solid rgba(0,229,255,0.15);
         }
+
+        /* Table */
         .prose-result table {
-          width:100%; border-collapse:collapse; margin:0 0 8px; font-size:12px; min-width:500px;
+          width:100%; border-collapse:collapse;
+          margin:0 0 6px; font-size:12px;
+          min-width:480px;
         }
         .prose-result th {
-          background:rgba(0,229,255,0.1); color:#00e5ff; padding:8px 10px;
-          text-align:left; font-size:10px; letter-spacing:0.08em; text-transform:uppercase;
-          border:1px solid rgba(0,229,255,0.2); font-weight:700; white-space:nowrap;
+          background:rgba(0,229,255,0.09);
+          color:#00e5ff; padding:7px 10px;
+          text-align:left; font-size:10px;
+          letter-spacing:0.09em; text-transform:uppercase;
+          border:1px solid rgba(0,229,255,0.18);
+          font-weight:700; white-space:nowrap;
         }
         .prose-result td {
-          padding:7px 10px; color:#94a3b8; border:1px solid rgba(255,255,255,0.07);
-          vertical-align:top; line-height:1.5;
+          padding:6px 10px;
+          color:#94a3b8;
+          border:1px solid rgba(255,255,255,0.06);
+          vertical-align:top;
+          line-height:1.55;
+          font-size:12px;
         }
-        .prose-result td:first-child { color:#cbd5e1; font-weight:600; white-space:nowrap; }
-        .prose-result tr:nth-child(even) td { background:rgba(255,255,255,0.025); }
-        .prose-result tr:hover td { background:rgba(0,229,255,0.04); }
+        /* First column — metric name — slightly brighter */
+        .prose-result td:first-child {
+          color:#cbd5e1; font-weight:600;
+          white-space:nowrap; min-width:90px;
+        }
+        .prose-result tr:nth-child(even) td { background:rgba(255,255,255,0.022); }
+        .prose-result tr:hover td { background:rgba(0,229,255,0.035); transition:background 0.12s; }
+
+        /* ── Bullet points inside cells ──
+           The AI outputs "· item" text. We style lines starting with · */
+        .prose-result td p {
+          margin:0; padding:0;
+          color:#94a3b8; font-size:12px; line-height:1.55;
+        }
+
+        /* Actual <ul>/<li> lists inside cells */
+        .prose-result td ul,
+        .prose-result td ol {
+          margin:0; padding-left:14px;
+          list-style:none;
+        }
+        .prose-result td li {
+          font-size:12px; color:#94a3b8;
+          line-height:1.55; margin:1px 0;
+          padding-left:2px;
+        }
+        .prose-result td li::before {
+          content:'·';
+          color:#00e5ff;
+          font-weight:700;
+          margin-right:5px;
+        }
+
+        /* Blockquote */
         .prose-result blockquote {
-          border-left:3px solid #00e5ff; padding:8px 14px; margin:8px 0 16px;
-          background:rgba(0,229,255,0.05); border-radius:0 4px 4px 0;
+          border-left:3px solid #00e5ff;
+          padding:7px 13px; margin:6px 0 14px;
+          background:rgba(0,229,255,0.05);
+          border-radius:0 4px 4px 0;
         }
-        .prose-result blockquote p { color:#7a9ab4; margin:0; font-size:12px; line-height:1.6; }
-        .prose-result p { color:#94a3b8; font-size:13px; line-height:1.7; margin:6px 0; }
+        .prose-result blockquote p {
+          color:#7a9ab4; margin:0; font-size:12px; line-height:1.55;
+        }
+
+        /* Standalone paragraphs (citations etc) */
+        .prose-result > p {
+          color:#475569; font-size:11px;
+          line-height:1.6; margin:6px 0;
+        }
         .prose-result strong { color:#e2e8f0; }
-        .prose-result hr { border:none; border-top:1px solid rgba(255,255,255,0.07); margin:20px 0; }
+        .prose-result hr {
+          border:none;
+          border-top:1px solid rgba(255,255,255,0.07);
+          margin:18px 0;
+        }
         .prose-result em { font-size:11px; color:#475569; }
+
         input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none; }
       `}</style>
 
@@ -255,7 +313,7 @@ Generate ALL of the following sections. Each section must be a Markdown table.
           <div style={{ position:'absolute', top:'-80px', right:'-80px', width:'450px', height:'450px', borderRadius:'50%', background:'radial-gradient(circle,rgba(0,229,255,0.08) 0%,transparent 70%)', pointerEvents:'none' }} />
           <div style={{ position:'absolute', bottom:'-80px', left:'-80px', width:'350px', height:'350px', borderRadius:'50%', background:'radial-gradient(circle,rgba(20,184,166,0.08) 0%,transparent 70%)', pointerEvents:'none' }} />
 
-          <div style={{ maxWidth:860, margin:'0 auto', position:'relative', zIndex:10 }}>
+          <div style={{ maxWidth:880, margin:'0 auto', position:'relative', zIndex:10 }}>
 
             {/* Header */}
             <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:8 }}>
@@ -264,15 +322,15 @@ Generate ALL of the following sections. Each section must be a Markdown table.
               </div>
               <div>
                 <h1 style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:28, textTransform:'uppercase', letterSpacing:'0.04em', color:'#fff', margin:0 }}>Smart Loan Matcher</h1>
-                <p style={{ fontSize:12, color:'#64748b', marginTop:2 }}>All results in table format · Eligibility · Schemes · Bank rates · Sales impact</p>
+                <p style={{ fontSize:12, color:'#64748b', marginTop:2 }}>Table format · Bullet points · 7-section analysis</p>
               </div>
             </div>
 
-            {/* Info */}
+            {/* Info banner */}
             <div style={{ display:'flex', gap:10, padding:'11px 14px', borderRadius:5, background:'rgba(0,229,255,0.05)', border:'1px solid rgba(0,229,255,0.16)', marginBottom:20 }}>
               <Info style={{ width:14, height:14, color:'#00e5ff', flexShrink:0, marginTop:2 }} />
               <p style={{ fontSize:12, color:'#7a9ab4', lineHeight:1.6, margin:0 }}>
-                Fill in your business details. The AI will generate 7 tables — financial snapshot, loan eligibility, recommended loans, bank rates, how each loan boosts sales, small vs large business benefits, and a step-by-step action plan.
+                Enter your details to get 7 crisp tables — financial snapshot, eligibility, top loans, bank rates, sales boost per scheme, small vs large benefits, and action plan.
               </p>
             </div>
 
@@ -283,7 +341,7 @@ Generate ALL of the following sections. Each section must be a Markdown table.
                     { l:'Monthly Income',  v:`₹${Number(formData.monthlyIncome).toLocaleString('en-IN')}`, c:'#22c55e' },
                     { l:'Total Outgoings', v:`₹${(Number(formData.monthlyExpenses)+Number(formData.existingEmi||0)).toLocaleString('en-IN')}`, c:'#f97316' },
                     { l:'Net Cash Flow',   v:`₹${netFlow.toLocaleString('en-IN')}`, c:netFlow>=0?'#00e5ff':'#ef4444' },
-                    { l:'FOIR',            v:foirPct !== null ? `${foirPct}%` : '—', c:foirPct !== null && foirPct < 40?'#4ade80':'#f87171' },
+                    { l:'FOIR',            v:foirPct!=null?`${foirPct}%`:'—', c:(foirPct??0)<40?'#4ade80':'#f87171' },
                   ].map(m => (
                       <div key={m.l} style={{ padding:'11px 14px', borderRadius:5, background:'rgba(17,31,42,0.9)', border:'1px solid rgba(255,255,255,0.06)' }}>
                         <div style={{ fontSize:10, color:'#475569', marginBottom:3, fontWeight:600, letterSpacing:'0.06em', textTransform:'uppercase' }}>{m.l}</div>
@@ -301,8 +359,8 @@ Generate ALL of the following sections. Each section must be a Markdown table.
                   <label style={{ display:'block', fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:8, color:'#00e5ff' }}>Business Size *</label>
                   <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
                     {[
-                      { val:'small' as const, label:'Small Business', sub:'Turnover < ₹5 Cr · Micro/Small MSME · Street Vendors', icon:'🏪' },
-                      { val:'large' as const, label:'Large Business',  sub:'Turnover > ₹5 Cr · Medium/Large MSME · Established', icon:'🏭' },
+                      { val:'small' as const, label:'Small Business', sub:'Turnover < ₹5 Cr · Micro/Small MSME', icon:'🏪' },
+                      { val:'large' as const, label:'Large Business',  sub:'Turnover > ₹5 Cr · Medium/Large MSME', icon:'🏭' },
                     ].map(opt => (
                         <button key={opt.val} type="button" onClick={() => setFormData(f => ({ ...f, businessSize:opt.val }))}
                                 style={{ padding:'12px 14px', borderRadius:5, textAlign:'left', cursor:'pointer', background:formData.businessSize===opt.val?'rgba(0,229,255,0.08)':'rgba(255,255,255,0.02)', border:`1px solid ${formData.businessSize===opt.val?'rgba(0,229,255,0.32)':'rgba(255,255,255,0.07)'}`, transition:'all 0.15s' }}>
@@ -346,12 +404,12 @@ Generate ALL of the following sections. Each section must be a Markdown table.
                   <Toggle label="Collateral Available"    checked={formData.collateralProvided} onChange={() => setFormData(f => ({ ...f, collateralProvided:!f.collateralProvided }))} />
                 </div>
 
-                {/* FOIR live hint */}
+                {/* FOIR hint */}
                 {foirPct !== null && (
                     <div style={{ padding:'9px 14px', borderRadius:4, background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)', fontSize:12, color:'#475569' }}>
                       FOIR = <span style={{ color:foirPct<40?'#4ade80':'#f87171', fontWeight:700 }}>{foirPct}%</span>
                       {' '}— Banks prefer below 40–50%.{' '}
-                      {foirPct < 40 ? '✅ Good standing.' : '⚠️ High — consider reducing existing EMIs before applying.'}
+                      {foirPct < 40 ? '✅ Good standing.' : '⚠️ Consider reducing EMIs before applying.'}
                     </div>
                 )}
 
@@ -372,23 +430,25 @@ Generate ALL of the following sections. Each section must be a Markdown table.
             {/* Result */}
             {result && (
                 <div className="fade-up" style={{ marginTop:20, background:'rgba(17,31,42,0.9)', border:'1px solid rgba(0,229,255,0.18)', borderRadius:10, padding:'20px 24px' }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:20, paddingBottom:14, borderBottom:'1px solid rgba(0,229,255,0.1)' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:18, paddingBottom:14, borderBottom:'1px solid rgba(0,229,255,0.1)' }}>
                     <div style={{ width:8, height:8, borderRadius:'50%', background:'#22c55e', animation:'pulse 1.5s ease infinite' }} />
-                    <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:14, letterSpacing:'0.08em', textTransform:'uppercase', color:'#22c55e' }}>Analysis Complete — 7 Tables Generated</span>
+                    <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:14, letterSpacing:'0.08em', textTransform:'uppercase', color:'#22c55e' }}>Analysis Complete — 7 Tables</span>
                   </div>
-                  <div className="prose-result"><Markdown>{result}</Markdown></div>
+                  <div className="prose-result">
+                    <Markdown>{result}</Markdown>
+                  </div>
                 </div>
             )}
 
             {/* Document upload */}
             <div style={{ marginTop:20, background:'rgba(17,31,42,0.7)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:10, padding:18 }}>
               <p style={{ fontSize:13, fontWeight:700, color:'white', margin:'0 0 10px' }}>
-                Document Upload <span style={{ fontSize:11, color:'#475569', fontWeight:400 }}>(optional — for better accuracy)</span>
+                Document Upload <span style={{ fontSize:11, color:'#475569', fontWeight:400 }}>(optional)</span>
               </p>
-              <div style={{ borderRadius:5, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', textAlign:'center', padding:'24px', border:'2px dashed rgba(0,229,255,0.18)', background:'rgba(0,229,255,0.02)', cursor:'pointer', transition:'border-color 0.15s' }}
+              <div style={{ borderRadius:5, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', textAlign:'center', padding:'22px', border:'2px dashed rgba(0,229,255,0.18)', background:'rgba(0,229,255,0.02)', cursor:'pointer', transition:'border-color 0.15s' }}
                    onMouseEnter={e => (e.currentTarget.style.borderColor='rgba(0,229,255,0.38)')}
                    onMouseLeave={e => (e.currentTarget.style.borderColor='rgba(0,229,255,0.18)')}>
-                <UploadCloud style={{ width:26, height:26, marginBottom:7, color:'rgba(0,229,255,0.38)' }} />
+                <UploadCloud style={{ width:24, height:24, marginBottom:7, color:'rgba(0,229,255,0.38)' }} />
                 <p style={{ fontSize:13, color:'#64748b', fontWeight:600, margin:'0 0 3px' }}>Click or drag & drop</p>
                 <p style={{ fontSize:11, color:'#334155', margin:0 }}>Bank statements · GST returns · ITR · Aadhaar / PAN</p>
               </div>
