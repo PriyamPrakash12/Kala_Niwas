@@ -11,28 +11,28 @@ const TYPES = [
     label: 'Product Description',
     color: '#f97316',
     icon: '🎨',
-    explanation: 'Generates compelling, culturally resonant copy for your handmade or retail product — highlights craftsmanship, materials, and buyer appeal. Perfect for marketplaces like Meesho, Amazon, or your own shop.',
+    explanation: 'Generates a crisp, ready-to-paste product listing — headline, 2-line description, bullet features, and a one-line buyer hook. Perfect for Meesho, Amazon, or WhatsApp catalogues.',
   },
   {
     value: 'loan_summary',
     label: 'Loan Summary',
     color: '#00e5ff',
     icon: '📄',
-    explanation: 'Converts your raw loan details (income, business type, amount needed) into a professional bank-ready summary. Use this when applying to MUDRA, SBI SME, or any government scheme.',
+    explanation: 'Converts your loan details into a short, bank-ready summary paragraph. Use when applying to MUDRA, SBI SME, or any government scheme — copy and paste directly into the application.',
   },
   {
     value: 'business_explanation',
     label: 'Business Pitch',
     color: '#a78bfa',
     icon: '🚀',
-    explanation: 'Creates a concise elevator pitch for your business — ideal for presenting to investors, wholesale buyers, NGOs, or applying for MSME grants. Makes your story trustworthy and memorable.',
+    explanation: 'Creates a punchy 5-line elevator pitch — problem, solution, traction, and ask. Ideal for investors, NGOs, wholesale buyers, or MSME grant applications.',
   },
 ];
 
 const PLACEHOLDERS: Record<string, string> = {
-  product:              'E.g., Handwoven Banarasi Silk Saree, red color with golden zari work, made by master artisan in Varanasi. Weight 600g, 5.5m length, pure silk...',
-  loan_summary:         'E.g., Small retail shop, monthly income ₹45,000, requesting ₹2L business loan for inventory expansion, 3 years in business, GST filed...',
-  business_explanation: 'E.g., We sell handcrafted bamboo furniture directly from tribal artisans in Assam to urban buyers. 12 artisans employed, annual revenue ₹18L...',
+  product:              'E.g., Handwoven Banarasi Silk Saree, red with golden zari work, pure silk, 5.5m, 600g, made by master artisan in Varanasi...',
+  loan_summary:         'E.g., Small retail shop, monthly income ₹45,000, requesting ₹2L for inventory expansion, 3 years old, GST filed, credit score 740...',
+  business_explanation: 'E.g., Sell handcrafted bamboo furniture from tribal artisans in Assam to urban buyers online. 12 artisans, annual revenue ₹18L, seeking ₹5L expansion capital...',
 };
 
 export default function AIDescriptor() {
@@ -53,20 +53,57 @@ export default function AIDescriptor() {
     setShowTip(false);
 
     let prompt = '';
+
     if (formData.type === 'product') {
-      prompt = `You are an expert copywriter for Indian small businesses and artisans. Write a compelling, culturally resonant product description for: ${formData.details}. 
-Structure your response with:
-1. A punchy headline (bold)
-2. A 3–4 sentence description highlighting craftsmanship, materials, and unique appeal
-3. Key Features as bullet points (material, dimensions/weight if mentioned, care instructions)
-4. A short "Why Buy" section with emotional appeal
-Keep tone warm, authentic, and suitable for Indian e-commerce platforms.`;
+      prompt = `You are a product copywriter for Indian artisans and small businesses. Write a CRISP, CONCISE product listing — easy to copy-paste into any marketplace. 
+
+Product details: ${formData.details}
+
+Output EXACTLY this structure (no extra explanation, no preamble):
+
+**[Product Name]**
+
+[One punchy sentence — what it is, who made it, what makes it special]
+
+**Features:**
+• [Material / fabric / base]
+• [Dimensions / weight / quantity]
+• [Crafting technique or origin]
+• [Care or use tip]
+
+**Why buy:** [One sentence — emotional or practical appeal]
+
+Keep the entire output under 80 words. No markdown headers. No extra paragraphs.`;
+
     } else if (formData.type === 'loan_summary') {
-      prompt = `You are a financial advisor specialising in Indian small business loans. Summarize the following details into a clear, professional summary for a bank application: ${formData.details}.
-Include: Business overview, financial snapshot, loan purpose, repayment capacity assessment, and recommended loan type with brief justification. Format professionally with headers.`;
+      prompt = `Write a concise loan application summary for an Indian small business. Under 100 words. Ready to copy-paste into a bank form.
+
+Details: ${formData.details}
+
+Output EXACTLY:
+
+**Business:** [Name and type in one line]
+**Financials:** [Monthly income, expenses, net flow in one line]
+**Loan Ask:** [Amount and purpose in one line]
+**Repayment Capacity:** [One sentence on why they can repay]
+**Recommended Scheme:** [Best matching govt scheme in one line]
+
+No extra text. No preamble.`;
+
     } else {
-      prompt = `You are a business consultant. Write a professional elevator pitch based on: ${formData.details}.
-Structure: 1. Opening hook (1 sentence). 2. The Problem you solve. 3. Your Solution & Unique Value. 4. Market & Traction. 5. Ask / Call to action. Keep it under 200 words, persuasive and specific.`;
+      prompt = `Write a punchy elevator pitch for an Indian small business. Under 80 words. Ready to present or paste.
+
+Details: ${formData.details}
+
+Output EXACTLY:
+
+**Hook:** [One bold opening sentence]
+**Problem:** [One sentence — what gap exists]
+**Solution:** [One sentence — what you do]
+**Traction:** [One sentence — revenue, customers, artisans, or growth]
+**Ask:** [One sentence — what you need and why]
+
+No extra text. No preamble.`;
     }
 
     try {
@@ -82,7 +119,13 @@ Structure: 1. Opening hook (1 sentence). 2. The Problem you solve. 3. Your Solut
   };
 
   const handleCopy = () => {
-    if (result) { navigator.clipboard.writeText(result); setCopied(true); setTimeout(() => setCopied(false), 2000); }
+    if (result) {
+      // Strip markdown for clean copy
+      const clean = result.replace(/\*\*/g, '').replace(/\*/g, '').replace(/^#+\s/gm, '');
+      navigator.clipboard.writeText(clean);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   return (
@@ -92,106 +135,123 @@ Structure: 1. Opening hook (1 sentence). 2. The Problem you solve. 3. Your Solut
         .ad-wrap * { font-family:'Barlow',sans-serif; box-sizing:border-box; }
         .ad-type-btn { transition:all 0.2s; }
         .ad-type-btn:hover { transform:translateY(-2px); }
-        .ad-textarea:focus { outline:none; }
         @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
-        .fade-up { animation:fadeUp 0.4s ease forwards; }
-        .prose-result h1,.prose-result h2,.prose-result h3 { color:white; margin:1em 0 0.5em; font-weight:700; font-family:'Barlow Condensed',sans-serif; letter-spacing:0.04em; text-transform:uppercase; }
-        .prose-result p { color:#94a3b8; line-height:1.8; margin:0.5em 0; }
-        .prose-result strong { color:#e2e8f0; }
-        .prose-result ul,.prose-result ol { color:#94a3b8; padding-left:1.5em; }
-        .prose-result li { margin:0.3em 0; }
-        .prose-result table { width:100%; border-collapse:collapse; margin:1em 0; }
-        .prose-result th { background:rgba(0,229,255,0.1); color:#00e5ff; padding:8px 12px; text-align:left; font-size:12px; letter-spacing:0.06em; text-transform:uppercase; border:1px solid rgba(0,229,255,0.2); }
-        .prose-result td { padding:8px 12px; color:#94a3b8; font-size:13px; border:1px solid rgba(255,255,255,0.06); }
-        .prose-result tr:nth-child(even) td { background:rgba(255,255,255,0.02); }
+        .fade-up { animation:fadeUp 0.35s ease forwards; }
+        @keyframes spin { to{transform:rotate(360deg)} }
+
+        /* Result box — clean readable output */
+        .result-box { background:rgba(13,27,36,0.95); border-radius:6px; padding:20px 22px; font-size:14px; line-height:1.8; color:#cbd5e1; white-space:pre-wrap; word-break:break-word; }
+        .result-box strong { color:#fff; font-weight:700; }
+        .result-box .label { font-size:10px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--ac); margin-bottom:2px; display:block; margin-top:12px; }
+        .result-box .label:first-child { margin-top:0; }
+
+        /* Markdown override — keep it simple */
+        .prose-md p { color:#94a3b8; line-height:1.8; margin:4px 0; font-size:14px; }
+        .prose-md strong { color:#e2e8f0; }
+        .prose-md ul { color:#94a3b8; padding-left:18px; margin:6px 0; }
+        .prose-md li { margin:3px 0; font-size:14px; }
       `}</style>
 
         <div className="ad-wrap min-h-screen p-4 md:p-8 relative overflow-hidden" style={{ background:'#0d1b24' }}>
-          <div style={{ position:'absolute', top:'-80px', right:'-80px', width:'400px', height:'400px', borderRadius:'50%', background:'radial-gradient(circle,rgba(249,115,22,0.1) 0%,transparent 70%)', pointerEvents:'none' }} />
-          <div style={{ position:'absolute', bottom:'-60px', left:'-60px', width:'300px', height:'300px', borderRadius:'50%', background:'radial-gradient(circle,rgba(0,229,255,0.08) 0%,transparent 70%)', pointerEvents:'none' }} />
+          <div style={{ position:'absolute', top:'-80px', right:'-80px', width:'360px', height:'360px', borderRadius:'50%', background:'radial-gradient(circle,rgba(249,115,22,0.1) 0%,transparent 70%)', pointerEvents:'none' }} />
+          <div style={{ position:'absolute', bottom:'-60px', left:'-60px', width:'280px', height:'280px', borderRadius:'50%', background:'radial-gradient(circle,rgba(0,229,255,0.07) 0%,transparent 70%)', pointerEvents:'none' }} />
 
-          <div className="max-w-2xl mx-auto relative" style={{ zIndex:10 }}>
+          <div style={{ maxWidth:580, margin:'0 auto', position:'relative', zIndex:10 }}>
 
             {/* Header */}
-            <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:32 }}>
-              <div style={{ width:42, height:42, borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(249,115,22,0.15)', border:'1px solid rgba(249,115,22,0.3)' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:28 }}>
+              <div style={{ width:42, height:42, borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(249,115,22,0.15)', border:'1px solid rgba(249,115,22,0.3)', flexShrink:0 }}>
                 <Sparkles style={{ width:20, height:20, color:'#f97316' }} />
               </div>
               <div>
-                <h1 style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:28, textTransform:'uppercase', letterSpacing:'0.04em', color:'#fff', margin:0 }}>AI Descriptor</h1>
-                <p style={{ fontSize:12, color:'#64748b', marginTop:2 }}>Generate compelling copy instantly — product listings, loan docs & business pitches</p>
+                <h1 style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:800, fontSize:26, textTransform:'uppercase', letterSpacing:'0.04em', color:'#fff', margin:0 }}>AI Descriptor</h1>
+                <p style={{ fontSize:12, color:'#64748b', marginTop:2 }}>Crisp, copy-paste ready descriptions in seconds</p>
               </div>
             </div>
 
             {/* Type selector */}
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:20 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8, marginBottom:16 }}>
               {TYPES.map((t) => (
-                  <button key={t.value} type="button" onClick={() => { setFormData({ ...formData, type: t.value }); setShowTip(true); setResult(null); }}
-                          className="ad-type-btn"
-                          style={{ padding:'14px 12px', borderRadius:6, border:`1px solid ${formData.type===t.value?`${t.color}50`:'rgba(255,255,255,0.07)'}`, background: formData.type===t.value?`${t.color}12`:'rgba(255,255,255,0.02)', textAlign:'left', boxShadow: formData.type===t.value?`0 0 16px ${t.color}18`:'none', cursor:'pointer' }}>
-                    <div style={{ fontSize:20, marginBottom:6 }}>{t.icon}</div>
-                    <div style={{ fontSize:11, fontWeight:700, letterSpacing:'0.06em', textTransform:'uppercase', color: formData.type===t.value?t.color:'#64748b' }}>{t.label}</div>
+                  <button key={t.value} type="button" className="ad-type-btn"
+                          onClick={() => { setFormData({ ...formData, type: t.value }); setShowTip(true); setResult(null); }}
+                          style={{ padding:'14px 10px', borderRadius:6, border:`1px solid ${formData.type===t.value?`${t.color}50`:'rgba(255,255,255,0.07)'}`, background: formData.type===t.value?`${t.color}12`:'rgba(255,255,255,0.02)', textAlign:'left', boxShadow: formData.type===t.value?`0 0 14px ${t.color}18`:'none', cursor:'pointer' }}>
+                    <div style={{ fontSize:18, marginBottom:6 }}>{t.icon}</div>
+                    <div style={{ fontSize:10, fontWeight:700, letterSpacing:'0.07em', textTransform:'uppercase', color: formData.type===t.value?t.color:'#64748b' }}>{t.label}</div>
                   </button>
               ))}
             </div>
 
-            {/* Feature explanation card */}
+            {/* Info tip */}
             {showTip && (
-                <div style={{ display:'flex', gap:12, padding:'14px 16px', borderRadius:6, background:`${activeType.color}08`, border:`1px solid ${activeType.color}25`, marginBottom:20 }}>
-                  <Info style={{ width:16, height:16, color:activeType.color, flexShrink:0, marginTop:2 }} />
-                  <p style={{ fontSize:13, color:'#7a9ab4', lineHeight:1.65, margin:0 }}>{activeType.explanation}</p>
+                <div style={{ display:'flex', gap:10, padding:'12px 14px', borderRadius:5, background:`${activeType.color}08`, border:`1px solid ${activeType.color}22`, marginBottom:16 }}>
+                  <Info style={{ width:14, height:14, color:activeType.color, flexShrink:0, marginTop:1 }} />
+                  <p style={{ fontSize:12, color:'#7a9ab4', lineHeight:1.6, margin:0 }}>{activeType.explanation}</p>
                 </div>
             )}
 
-            {/* Form card */}
-            <div style={{ background:'rgba(17,31,42,0.9)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:12, padding:24 }}>
+            {/* Form */}
+            <div style={{ background:'rgba(17,31,42,0.9)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:10, padding:20 }}>
               <form onSubmit={handleSubmit}>
-                <label style={{ display:'block', fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:10, color:activeType.color }}>
+                <label style={{ display:'block', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:8, color:activeType.color }}>
                   Describe your {formData.type === 'product' ? 'product' : formData.type === 'loan_summary' ? 'loan details' : 'business'}
                 </label>
                 <textarea
-                    className="ad-textarea"
-                    style={{ width:'100%', borderRadius:6, padding:'12px 14px', fontSize:13, color:'white', background:'rgba(13,27,36,0.8)', border:'1px solid rgba(255,255,255,0.08)', minHeight:140, resize:'vertical', lineHeight:1.65, fontFamily:"'Barlow',sans-serif" }}
+                    style={{ width:'100%', borderRadius:5, padding:'11px 13px', fontSize:13, color:'white', background:'rgba(13,27,36,0.8)', border:'1px solid rgba(255,255,255,0.08)', minHeight:120, resize:'vertical', lineHeight:1.65, fontFamily:"'Barlow',sans-serif", outline:'none', transition:'border-color 0.18s,box-shadow 0.18s' }}
                     required
                     value={formData.details}
                     onChange={(e) => setFormData({ ...formData, details: e.target.value })}
                     placeholder={PLACEHOLDERS[formData.type]}
-                    onFocus={(e) => { e.target.style.borderColor=activeType.color; e.target.style.boxShadow=`0 0 0 3px ${activeType.color}18`; }}
+                    onFocus={(e) => { e.target.style.borderColor=activeType.color; e.target.style.boxShadow=`0 0 0 3px ${activeType.color}15`; }}
                     onBlur={(e)  => { e.target.style.borderColor='rgba(255,255,255,0.08)'; e.target.style.boxShadow='none'; }}
                 />
-
-                <div style={{ fontSize:11, color:'#334155', marginTop:6, marginBottom:16 }}>
-                  Tip: The more detail you provide (materials, dimensions, region, target buyer), the better the output.
-                </div>
+                <p style={{ fontSize:11, color:'#334155', marginTop:5, marginBottom:14 }}>
+                  Include materials, size/weight, origin, and target buyer for best results.
+                </p>
 
                 {error && (
-                    <div style={{ marginBottom:14, padding:'10px 14px', borderRadius:6, background:'rgba(244,63,94,0.1)', border:'1px solid rgba(244,63,94,0.3)', color:'#f87171', fontSize:13 }}>
+                    <div style={{ marginBottom:12, padding:'9px 13px', borderRadius:5, background:'rgba(244,63,94,0.1)', border:'1px solid rgba(244,63,94,0.3)', color:'#f87171', fontSize:13 }}>
                       ⚠ {error}
                     </div>
                 )}
 
                 <button type="submit" disabled={loading || !formData.details.trim()}
-                        style={{ width:'100%', padding:'12px', borderRadius:6, fontFamily:"'Barlow',sans-serif", fontWeight:700, fontSize:13, letterSpacing:'0.06em', textTransform:'uppercase', display:'flex', alignItems:'center', justifyContent:'center', gap:8, background: loading || !formData.details.trim() ? `${activeType.color}40` : activeType.color, color:'#0d1b24', cursor: loading ? 'not-allowed':'pointer', border:'none', boxShadow: !loading && formData.details.trim() ? `0 0 20px ${activeType.color}30`:'none', transition:'all 0.2s' }}>
-                  {loading ? <><Loader2 style={{ width:16, height:16, animation:'spin 1s linear infinite' }} /> Generating...</> : <><Sparkles style={{ width:16, height:16 }} /> Generate</>}
+                        style={{ width:'100%', padding:'11px', borderRadius:5, fontFamily:"'Barlow',sans-serif", fontWeight:700, fontSize:12, letterSpacing:'0.07em', textTransform:'uppercase', display:'flex', alignItems:'center', justifyContent:'center', gap:8, background: loading || !formData.details.trim() ? `${activeType.color}35` : activeType.color, color:'#0d1b24', cursor: loading ? 'not-allowed':'pointer', border:'none', transition:'all 0.18s' }}>
+                  {loading
+                      ? <><Loader2 style={{ width:15, height:15, animation:'spin 1s linear infinite' }} /> Generating...</>
+                      : <><Sparkles style={{ width:15, height:15 }} /> Generate</>
+                  }
                 </button>
               </form>
             </div>
 
             {/* Result */}
             {result && (
-                <div className="fade-up" style={{ marginTop:20, background:'rgba(17,31,42,0.9)', border:`1px solid ${activeType.color}30`, borderRadius:12, padding:24 }}>
-                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
-                    <span style={{ fontSize:13, fontWeight:700, letterSpacing:'0.06em', textTransform:'uppercase', color:activeType.color }}>Generated Result</span>
-                    <button onClick={handleCopy} style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:4, fontSize:12, fontWeight:600, background: copied?'rgba(0,229,255,0.1)':'rgba(255,255,255,0.05)', color: copied?'#00e5ff':'#64748b', border:'1px solid rgba(255,255,255,0.08)', cursor:'pointer', fontFamily:"'Barlow',sans-serif" }}>
-                      {copied ? <><Check style={{ width:12, height:12 }} /> Copied</> : <><Copy style={{ width:12, height:12 }} /> Copy</>}
+                <div className="fade-up" style={{ marginTop:16 }}>
+                  {/* Header bar */}
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 14px', borderRadius:'6px 6px 0 0', background:`${activeType.color}14`, border:`1px solid ${activeType.color}30`, borderBottom:'none' }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                      <div style={{ width:7, height:7, borderRadius:'50%', background:activeType.color }} />
+                      <span style={{ fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:activeType.color }}>Ready to Copy</span>
+                    </div>
+                    <button onClick={handleCopy}
+                            style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 12px', borderRadius:3, fontSize:11, fontWeight:700, letterSpacing:'0.07em', textTransform:'uppercase', background: copied?'rgba(34,197,94,0.15)':'rgba(255,255,255,0.06)', color: copied?'#4ade80':'#94a3b8', border:`1px solid ${copied?'rgba(34,197,94,0.35)':'rgba(255,255,255,0.1)'}`, cursor:'pointer', fontFamily:"'Barlow',sans-serif", transition:'all 0.15s' }}>
+                      {copied ? <><Check style={{ width:12, height:12 }} /> Copied!</> : <><Copy style={{ width:12, height:12 }} /> Copy Text</>}
                     </button>
                   </div>
-                  <div className="prose-result" style={{ fontSize:14 }}><Markdown>{result}</Markdown></div>
+
+                  {/* Output box */}
+                  <div style={{ background:'rgba(11,18,26,0.97)', border:`1px solid ${activeType.color}28`, borderRadius:'0 0 6px 6px', padding:'18px 20px' }}>
+                    <div className="prose-md"><Markdown>{result}</Markdown></div>
+                  </div>
+
+                  {/* Character count hint */}
+                  <p style={{ fontSize:11, color:'#1e3a47', marginTop:6, textAlign:'right' }}>
+                    {result.replace(/\*\*/g,'').replace(/\*/g,'').length} characters
+                  </p>
                 </div>
             )}
           </div>
         </div>
-        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </>
   );
 }
